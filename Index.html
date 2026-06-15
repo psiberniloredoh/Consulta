@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Portal clínico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --paper:#F2F4F0; --card:#FBFCFA; --ink:#1B2A27; --ink-soft:#5C6A64; --ink-faint:#8A958F;
+    --accent:#3F6F5F; --accent-deep:#2C5044; --accent-wash:#E7EFEA; --clay:#BF8458;
+    --line:#E2E6E0; --line-strong:#CDD4CD; --danger:#A8443B; --danger-wash:#F6E7E5;
+    --radius:14px; --shadow:0 1px 2px rgba(27,42,39,.04), 0 12px 30px rgba(27,42,39,.07);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--paper);color:var(--ink);font-family:"Inter",system-ui,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .hidden{display:none !important}
+  button{font-family:inherit;cursor:pointer}
+  input{font-family:inherit}
+
+  /* ---------- Login ---------- */
+  .login-wrap{min-height:100vh;display:grid;place-items:center;padding:24px}
+  .login-card{width:100%;max-width:392px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:38px 34px 30px}
+  .mark{display:flex;align-items:baseline;gap:9px}
+  .mark .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);transform:translateY(-1px);flex:none}
+  .mark .name{font-family:"Fraunces",serif;font-weight:500;font-size:21px;letter-spacing:-.01em}
+  .login-card .mark{margin-bottom:28px}
+  .login-card h1{font-family:"Fraunces",serif;font-weight:500;font-size:25px;line-height:1.18;letter-spacing:-.015em;margin:0 0 6px}
+  .login-card .sub{color:var(--ink-soft);font-size:13.5px;margin:0 0 26px}
+  .field{margin-bottom:15px}
+  .field label{display:block;font-size:12.5px;font-weight:500;color:var(--ink-soft);margin-bottom:6px}
+  .field input{width:100%;padding:11px 13px;border:1px solid var(--line-strong);border-radius:10px;background:#fff;color:var(--ink);font-size:14.5px;transition:border-color .15s, box-shadow .15s}
+  .field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+  .btn-primary{width:100%;margin-top:8px;padding:12px 16px;border:none;border-radius:10px;background:var(--accent-deep);color:#fff;font-size:14.5px;font-weight:500;transition:background .15s, transform .05s}
+  .btn-primary:hover{background:#234035}
+  .btn-primary:active{transform:translateY(1px)}
+  .btn-primary:disabled{opacity:.55;cursor:default}
+  .login-foot{margin-top:20px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-faint);display:flex;align-items:center;gap:7px}
+  .login-foot svg{flex:none}
+  .notice{font-size:13px;padding:11px 13px;border-radius:10px;margin-bottom:18px}
+  .notice.error{background:var(--danger-wash);color:var(--danger)}
+  .notice.setup{background:#FBF3E8;color:#8A5A22;border:1px solid #EAD9BF}
+  .notice code{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+
+  /* ---------- App shell ---------- */
+  .app{min-height:100vh;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:13px 24px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  .top-right{display:flex;align-items:center;gap:16px}
+  .who{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-soft)}
+  .who .email{font-weight:500;color:var(--ink);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .btn-ghost{padding:8px 13px;border:1px solid var(--line-strong);border-radius:9px;background:transparent;color:var(--ink);font-size:13px;font-weight:500;transition:background .15s,border-color .15s}
+  .btn-ghost:hover{background:var(--paper);border-color:var(--ink-faint)}
+
+  /* ---------- Patient picker ---------- */
+  .picker{position:relative;width:300px;max-width:42vw}
+  .picker .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-faint)}
+  .picker input{width:100%;padding:10px 13px 10px 37px;border:1px solid var(--line-strong);border-radius:10px;background:#fff;font-size:14px;color:var(--ink);transition:border-color .15s,box-shadow .15s}
+  .picker input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+  .picker-menu{position:absolute;top:calc(100% + 6px);left:0;right:0;max-height:340px;overflow-y:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);z-index:30;padding:5px}
+  .picker-item{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:9px 11px;border-radius:8px;cursor:pointer}
+  .picker-item:hover,.picker-item.active{background:var(--accent-wash)}
+  .pi-name{font-size:14px;font-weight:500;color:var(--ink)}
+  .pi-rut{font-size:12px;color:var(--ink-faint);white-space:nowrap}
+  .picker-empty{padding:14px 12px;font-size:13px;color:var(--ink-faint);text-align:center}
+
+  /* ---------- Main / states ---------- */
+  .main{flex:1;width:100%;max-width:1080px;margin:0 auto;padding:34px 26px 70px}
+  .state-empty{margin-top:8vh;text-align:center;color:var(--ink-soft)}
+  .state-empty .ring{width:46px;height:46px;border-radius:50%;border:1px solid var(--line-strong);display:grid;place-items:center;margin:0 auto 16px;color:var(--accent)}
+  .state-empty .big{font-family:"Fraunces",serif;font-size:20px;color:var(--ink);margin-bottom:6px}
+  .state-empty p{margin:0;font-size:14px}
+  .spinner{width:24px;height:24px;border-radius:50%;border:2.5px solid var(--line-strong);border-top-color:var(--accent);animation:spin .7s linear infinite;margin:0 auto 16px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ---------- Patient view ---------- */
+  .patient-head{margin-bottom:22px}
+  .patient-head .eyebrow{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--accent-deep);margin-bottom:5px}
+  .patient-head h2{font-family:"Fraunces",serif;font-weight:500;font-size:30px;letter-spacing:-.015em;margin:0 0 4px}
+  .pmeta{font-size:13.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:24px;overflow-x:auto}
+  .tab{position:relative;border:none;background:transparent;padding:11px 14px;font-size:14px;font-weight:500;color:var(--ink-soft);border-radius:8px 8px 0 0;white-space:nowrap}
+  .tab:hover:not(:disabled){color:var(--ink);background:var(--accent-wash)}
+  .tab.active{color:var(--accent-deep)}
+  .tab.active::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--accent-deep);border-radius:2px}
+  .tab:disabled{color:var(--ink-faint);cursor:default}
+  .tab .soon{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--clay);margin-left:6px;vertical-align:1px}
+
+  .ficha-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .ficha-item{background:var(--card);padding:15px 18px}
+  .ficha-item .fk{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);margin-bottom:4px}
+  .ficha-item .fv{font-size:15px;color:var(--ink);word-break:break-word}
+  .ficha-item .fv.empty{color:var(--ink-faint)}
+
+  @media (max-width:620px){
+    .main{padding:24px 16px 56px}
+    .topbar{padding:11px 14px;flex-wrap:wrap}
+    .picker{width:100%;max-width:none;order:3}
+    .ficha-grid{grid-template-columns:1fr}
+    .patient-head h2{font-size:25px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login" class="login-wrap">
+  <div class="login-card">
+    <div class="mark"><span class="dot"></span><span class="name" id="brand">Portal clínico</span></div>
+    <h1>Acceso al portal</h1>
+    <p class="sub">Ingresa con tu correo y contraseña para continuar.</p>
+
+    <div id="setupNotice" class="notice setup hidden">
+      Falta configurar la conexión. Completa <code>SUPABASE_URL</code> y <code>SUPABASE_ANON_KEY</code> en el archivo.
+    </div>
+    <div id="loginError" class="notice error hidden"></div>
+
+    <form id="loginForm" autocomplete="on">
+      <div class="field">
+        <label for="email">Correo</label>
+        <input id="email" type="email" required autocomplete="username" placeholder="[email protected]" />
+      </div>
+      <div class="field">
+        <label for="password">Contraseña</label>
+        <input id="password" type="password" required autocomplete="current-password" placeholder="••••••••" />
+      </div>
+      <button type="submit" class="btn-primary" id="loginBtn">Entrar</button>
+    </form>
+
+    <div class="login-foot">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Acceso restringido. Conexión cifrada.
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" class="app hidden">
+  <div class="topbar">
+    <div class="mark"><span class="dot"></span><span class="name" id="brand2">Portal clínico</span></div>
+    <div class="top-right">
+      <div class="picker hidden" id="picker">
+        <span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+        <input id="pickerInput" type="text" placeholder="Buscar paciente por nombre…" autocomplete="off" />
+        <div class="picker-menu hidden" id="pickerMenu"></div>
+      </div>
+      <div class="who">
+        <span class="email" id="userEmail"></span>
+        <button class="btn-ghost" id="logoutBtn">Salir</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- loading -->
+    <div id="loadingState" class="state-empty"><div class="spinner"></div>Cargando…</div>
+
+    <!-- empty / prompt -->
+    <div id="emptyState" class="state-empty hidden">
+      <div class="ring"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="big">Elige un paciente</div>
+      <p>Usa el buscador de arriba a la derecha para abrir una ficha.</p>
+    </div>
+
+    <!-- patient detail -->
+    <div id="patientView" class="hidden">
+      <div class="patient-head">
+        <div class="eyebrow">Paciente</div>
+        <h2 id="pName">—</h2>
+        <div class="pmeta" id="pMeta"></div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" data-tab="principal">Información principal</button>
+        <button class="tab" disabled>Terapias <span class="soon">Pronto</span></button>
+        <button class="tab" disabled>Sesiones <span class="soon">Pronto</span></button>
+        <button class="tab" disabled>Cobros <span class="soon">Pronto</span></button>
+      </div>
+      <div class="panel" id="panel-principal">
+        <div class="ficha-grid" id="fichaGrid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIGURACIÓN
+   ============================================================ */
+const SUPABASE_URL      = "https://lyhrfpqxsoorakscpszf.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable__TIV3SJKsnymPXs85fzKMQ_qUBu6hsE";
+const TABLE_PACIENTES   = "Pacientes";
+const TABLE_PERFILES    = "PERFILES";
+const PRACTICE_NAME     = "Portal clínico";
+/* ============================================================ */
+
+const $ = (s) => document.querySelector(s);
+const configured = !SUPABASE_URL.startsWith("TU_") && !SUPABASE_ANON_KEY.startsWith("TU_");
+
+$("#brand").textContent  = PRACTICE_NAME;
+$("#brand2").textContent = PRACTICE_NAME;
+
+let sb = null;
+if (configured) {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true }
+  });
+} else {
+  $("#setupNotice").classList.remove("hidden");
+}
+
+let user = null;
+let patients = [];
+
+/* ---------- helpers ---------- */
+const PREFERRED = ["rut","nombre","name","apellido","correo","email","mail","telefono","fono","celular","edad","fecha"];
+function orderColumns(keys){
+  const used = new Set(); const pref = [];
+  PREFERRED.forEach(p => keys.forEach(k => {
+    if (k.toLowerCase().includes(p) && !used.has(k)) { used.add(k); pref.push(k); }
+  }));
+  return [...pref, ...keys.filter(k => !used.has(k))];
+}
+function prettyKey(k){ return k.replace(/[_-]+/g," ").replace(/\b\w/g, c => c.toUpperCase()); }
+function fmt(v){
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v === "boolean") return v ? "Sí" : "No";
+  if (typeof v === "object") return JSON.stringify(v);
+  return String(v);
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function rutOf(p){ return p.RUT ?? p.rut ?? ""; }
+function displayName(p){
+  const keys = Object.keys(p);
+  const nameK = keys.find(k => /nombre|name/i.test(k));
+  const lastK = keys.find(k => /apellido/i.test(k));
+  const parts = [];
+  if (nameK) parts.push(p[nameK]);
+  if (lastK) parts.push(p[lastK]);
+  const n = parts.filter(Boolean).join(" ").trim();
+  return n || String(rutOf(p)) || "Paciente";
+}
+
+/* ---------- login ---------- */
+$("#loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!sb) return;
+  const err = $("#loginError"); err.classList.add("hidden");
+  const btn = $("#loginBtn"); btn.disabled = true; btn.textContent = "Verificando…";
+  const { error } = await sb.auth.signInWithPassword({
+    email: $("#email").value.trim(), password: $("#password").value
+  });
+  btn.disabled = false; btn.textContent = "Entrar";
+  if (error){ err.textContent = "No pudimos iniciar sesión. Revisa el correo y la contraseña."; err.classList.remove("hidden"); return; }
+  await enterApp();
+});
+$("#logoutBtn").addEventListener("click", async () => {
+  if (sb) await sb.auth.signOut();
+  $("#app").classList.add("hidden");
+  $("#login").classList.remove("hidden");
+  $("#password").value = ""; patients = [];
+});
+
+/* ---------- entrar ---------- */
+async function enterApp(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session) return;
+  user = session.user;
+  $("#userEmail").textContent = user.email || "Sesión activa";
+  $("#login").classList.add("hidden");
+  $("#app").classList.remove("hidden");
+  await loadData();
+}
+
+function showState(which){
+  $("#loadingState").classList.toggle("hidden", which !== "loading");
+  $("#emptyState").classList.toggle("hidden", which !== "empty");
+  $("#patientView").classList.toggle("hidden", which !== "patient");
+}
+
+async function loadData(){
+  showState("loading");
+
+  // rol del usuario (si la tabla aún no está enlazada, se infiere por cantidad de filas)
+  let rol = null;
+  try {
+    const { data } = await sb.from(TABLE_PERFILES).select("ROL").eq("id", user.id).maybeSingle();
+    if (data) rol = data.ROL;
+  } catch (e) { /* sin enlace todavía */ }
+
+  const { data, error } = await sb.from(TABLE_PACIENTES).select("*");
+  if (error){
+    showState("empty");
+    $("#emptyState").innerHTML = '<div class="big">No se pudieron cargar las fichas</div><p>Revisa que la tabla '+TABLE_PACIENTES+' exista y que las políticas RLS permitan lectura.</p>';
+    return;
+  }
+  patients = data || [];
+  const isPsico = rol === "Psicólogo" || (rol === null && patients.length > 1);
+
+  if (isPsico){
+    $("#picker").classList.remove("hidden");
+    if (patients.length === 0){
+      showState("empty");
+      $("#emptyState").innerHTML = '<div class="big">Aún no hay pacientes</div><p>Cuando cargues datos en la tabla, aparecerán aquí.</p>';
+    } else {
+      showState("empty");
+    }
+  } else {
+    $("#picker").classList.add("hidden");
+    if (patients.length >= 1) selectPatient(patients[0]);
+    else { showState("empty"); $("#emptyState").innerHTML = '<div class="big">Sin ficha disponible</div><p>No encontramos información asociada a tu cuenta.</p>'; }
+  }
+}
+
+/* ---------- picker ---------- */
+const pickerInput = $("#pickerInput");
+const pickerMenu  = $("#pickerMenu");
+
+function renderMenu(filter){
+  const q = (filter || "").trim().toLowerCase();
+  const list = patients.filter(p => {
+    if (!q) return true;
+    return displayName(p).toLowerCase().includes(q) || String(rutOf(p)).toLowerCase().includes(q);
+  });
+  if (list.length === 0){ pickerMenu.innerHTML = '<div class="picker-empty">Sin coincidencias</div>'; return; }
+  pickerMenu.innerHTML = list.map(p => {
+    const i = patients.indexOf(p);
+    return '<div class="picker-item" data-i="'+i+'"><span class="pi-name">'+esc(displayName(p))+'</span><span class="pi-rut">'+esc(String(rutOf(p)))+'</span></div>';
+  }).join("");
+  pickerMenu.querySelectorAll(".picker-item").forEach(el => {
+    el.addEventListener("mousedown", (ev) => { ev.preventDefault(); selectPatient(patients[+el.dataset.i]); });
+  });
+}
+pickerInput.addEventListener("focus", () => { renderMenu(pickerInput.value); pickerMenu.classList.remove("hidden"); });
+pickerInput.addEventListener("input", () => { renderMenu(pickerInput.value); pickerMenu.classList.remove("hidden"); });
+document.addEventListener("click", (e) => { if (!$("#picker").contains(e.target)) pickerMenu.classList.add("hidden"); });
+
+/* ---------- seleccionar / ficha ---------- */
+function selectPatient(p){
+  pickerInput.value = displayName(p);
+  pickerMenu.classList.add("hidden");
+  $("#pName").textContent = displayName(p);
+  const rut = rutOf(p);
+  $("#pMeta").textContent = rut ? ("RUT " + rut) : "";
+  renderFicha(p);
+  showState("patient");
+}
+function renderFicha(p){
+  const cols = orderColumns(Object.keys(p));
+  $("#fichaGrid").innerHTML = cols.map(c => {
+    const v = fmt(p[c]);
+    return '<div class="ficha-item"><div class="fk">'+esc(prettyKey(c))+'</div>'
+         + '<div class="fv'+(v===null?' empty':'')+'">'+(v===null?"—":esc(v))+'</div></div>';
+  }).join("");
+}
+
+/* ---------- sesión persistente ---------- */
+(async () => {
+  if (!sb) return;
+  const { data:{ session } } = await sb.auth.getSession();
+  if (session) await enterApp();
+})();
+</script>
+</body>
+</html>
