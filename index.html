@@ -131,20 +131,32 @@
   .dash-bar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
   .dash-bar .ter-count{margin-left:auto}
   .dash-group{margin-bottom:12px}
-  .dash-group-head{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer;text-align:left;transition:background .15s}
-  .dash-group-head:hover{background:var(--accent-wash)}
-  .dash-group-head .dgright{display:flex;align-items:center;gap:14px}
-  .dash-group-head .chev{color:var(--ink-faint);transition:transform .15s;display:inline-block;font-size:12px}
-  .dash-group-head.open .chev{transform:rotate(90deg)}
+  .dash-group-head{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:6px 8px 6px 6px}
+  .dgh-main{display:flex;align-items:center;gap:10px;background:transparent;border:none;padding:8px;cursor:pointer;flex:1;text-align:left;border-radius:10px;transition:background .15s;min-width:0}
+  .dgh-main:hover{background:var(--accent-wash)}
+  .dgh-main .chev{color:var(--ink-faint);transition:transform .15s;display:inline-block;font-size:12px;flex:none}
+  .dgh-main.open .chev{transform:rotate(90deg)}
+  .dgh-right{display:flex;align-items:center;gap:14px;padding-right:4px;flex:none}
+  .btn-wa{background:#25D366;color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:13px;font-weight:600;cursor:pointer;transition:filter .15s;white-space:nowrap}
+  .btn-wa:hover{filter:brightness(.93)}
+  .btn-pay{background:transparent;border:1px solid var(--accent);color:var(--accent-deep);border-radius:7px;padding:5px 11px;font-size:12.5px;font-weight:500;cursor:pointer;transition:background .15s;white-space:nowrap}
+  .btn-pay:hover{background:var(--accent-wash)}
   .dash-group-body{margin-top:8px}
   .dash-chart{height:300px;margin-bottom:24px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
-  .dgname{font-family:"Fraunces",serif;font-size:17px;font-weight:500;color:var(--ink)}
-  .dgsum{font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+  .dgname{font-family:"Fraunces",serif;font-size:17px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dgsum{font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap}
   .ter-table th.num,.ter-table td.num{text-align:right;font-variant-numeric:tabular-nums}
   .ter-table tbody tr.ter-total td{font-weight:600;background:var(--accent-wash);border-top:2px solid var(--line-strong)}
   .dash-subcount{font-size:12.5px;color:var(--ink-soft);margin-bottom:8px}
   .cal-wrap{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
   .cal-wrap iframe{display:block;width:100%}
+  .btn-wa2{background:transparent;border:1px solid #25D366;color:#178a43;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s}
+  .btn-wa2:hover{background:#eafaf0}
+  .modal-scrim{position:fixed;inset:0;background:rgba(27,42,39,.34);display:grid;place-items:center;z-index:40;padding:20px}
+  .modal-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;width:100%;max-width:380px}
+  .modal-card h3{font-family:"Fraunces",serif;font-weight:500;font-size:19px;margin:0 0 4px;letter-spacing:-.01em}
+  .mm-sub{font-size:13.5px;color:var(--ink-soft);margin:0 0 16px}
+  .mm-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
 
   @media (max-width:620px){
     .main{padding:24px 16px 56px}
@@ -227,6 +239,18 @@
   </div>
 </div>
 
+<div class="modal-scrim hidden" id="monthModal">
+  <div class="modal-card">
+    <h3 id="mmTitle">Resumen mensual</h3>
+    <p class="mm-sub">Elige el periodo que quieres enviar:</p>
+    <select id="mmPeriod" class="edit-input"></select>
+    <div class="mm-actions">
+      <button class="btn-ghost" id="mmCancel">Cancelar</button>
+      <button class="btn-primary inline" id="mmGenerate">Generar WhatsApp</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -239,6 +263,8 @@ const PRACTICE_NAME     = "Portal clínico";
 // Enlace de inserción de Google Calendar. Por defecto, el calendario principal.
 // Para usar otro: Google Calendar → Configuración → (tu calendario) → "Integrar calendario" → copia el src del código <iframe>.
 const CALENDAR_EMBED_SRC = "https://calendar.google.com/calendar/embed?src=psiberniloredoh%40gmail.com&ctz=America%2FSantiago";
+// Datos bancarios que se incluyen en el borrador de WhatsApp de cobro.
+const BANK_DETAILS = "Datos Bancarios\nBernardita Loredo\n17.995.068-5\nBanco Chile\nCuenta corriente\n8250029007\nbernardita.loredo.h@mail.pucv.cl";
 
 // Campos de Pacientes que enlazan con una tabla de referencia.
 //   fk    = columna en Pacientes
@@ -263,7 +289,7 @@ else $("#setupNotice").classList.remove("hidden");
 
 let user = null, patients = [], lookups = {}, currentPatient = null, editing = false, isPsico = false;
 let terapias = [], terapiasPeriodo = "";
-let allTerapias = [], dashSection = "periodo", dashTodasQuery = "", patientsByNorm = {};
+let allTerapias = [], dashSection = "periodo", dashTodasQuery = "", patientsByNorm = {}, monthModalRut = "";
 
 /* helpers */
 const PREFERRED = ["rut","nombre","name","apellido","correo","email","mail","telefono","fono","celular","edad","fecha"];
@@ -628,7 +654,10 @@ function renderDashboard(){
   el.querySelectorAll(".dpill").forEach(b=>b.addEventListener("click",()=>{ dashSection=b.dataset.sec; renderDashboard(); }));
   el.querySelectorAll("[data-export]").forEach(b=>b.addEventListener("click",()=>exportDash(b.dataset.export)));
   const s=$("#dashSearch"); if(s) s.addEventListener("input",()=>{ dashTodasQuery=s.value; const w=$("#dashTodasWrap"); if(w) w.innerHTML=dashTodasTableHtml(); });
-  el.querySelectorAll("[data-toggle]").forEach(b=>b.addEventListener("click",()=>{ const body=b.nextElementSibling; if(body){ body.classList.toggle("hidden"); b.classList.toggle("open"); } }));
+  el.querySelectorAll("[data-toggle]").forEach(b=>b.addEventListener("click",()=>{ const g=b.closest(".dash-group"); const body=g&&g.querySelector(".dash-group-body"); if(body){ body.classList.toggle("hidden"); b.classList.toggle("open"); } }));
+  el.querySelectorAll("[data-wa]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); buildWhatsApp(b.dataset.wa); }));
+  el.querySelectorAll("[data-mes]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); openMonthModal(b.dataset.mes); }));
+  el.querySelectorAll("[data-pay]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); markPaid(b.dataset.pay); }));
   if(dashSection==="periodo") renderPeriodoChart();
 }
 function dashPeriodo(){
@@ -682,22 +711,79 @@ function renderPeriodoChart(){
 }
 function dashImpagas(){
   const {fechaK,sesK,pagadoK,montoK}=terKeys();
+  const idK=Object.keys(allTerapias[0]||{}).find(c=>/^id$/i.test(c));
   const unpaid=allTerapias.filter(r=>pagadoK && isUnpaidVal(r[pagadoK]));
   if(!unpaid.length) return '<div class="state-empty" style="margin-top:2vh"><div class="big">Todo al día</div><p>No hay sesiones pendientes de pago.</p></div>';
   const groups={};
   unpaid.forEach(r=>{ const k=normRut(rOf(r)); if(!groups[k])groups[k]={name:nameForRut(rOf(r)),rows:[],sum:0}; groups[k].rows.push(r); groups[k].sum+=Number(r[montoK])||0; });
-  const list=Object.values(groups).sort((a,b)=>String(a.name).localeCompare(String(b.name),"es",{sensitivity:"base"}));
-  const totalSum=list.reduce((a,g)=>a+g.sum,0);
+  const entries=Object.entries(groups).sort((a,b)=>String(a[1].name).localeCompare(String(b[1].name),"es",{sensitivity:"base"}));
+  const totalSum=entries.reduce((a,e)=>a+e[1].sum,0);
   let html='<div class="dash-bar"><span class="ter-count">'+unpaid.length+' sesiones impagas · '+esc(fmtMonto(totalSum)||"$0")+' adeudado</span><button class="btn-primary inline" data-export="impagas">Descargar Excel</button></div>';
-  list.forEach(g=>{
+  entries.forEach(([key,g])=>{
     g.rows.sort((a,b)=>String(b[fechaK]||"").localeCompare(String(a[fechaK]||"")));
-    const items=g.rows.map(r=>'<tr><td>'+esc(fmtDateTime(r[fechaK])||"—")+'</td><td>'+esc(tipoSesion(r,sesK)||"—")+'</td><td class="num">'+esc(fmtMonto(r[montoK])||"—")+'</td></tr>').join("");
+    const items=g.rows.map(r=>'<tr><td>'+esc(fmtDateTime(r[fechaK])||"—")+'</td><td>'+esc(tipoSesion(r,sesK)||"—")+'</td><td class="num">'+esc(fmtMonto(r[montoK])||"—")+'</td><td class="num"><button class="btn-pay" data-pay="'+esc(String(idK?r[idK]:""))+'">Marcar pagada</button></td></tr>').join("");
     html+='<div class="dash-group">'
-      +'<button class="dash-group-head" data-toggle><span class="dgname">'+esc(g.name)+'</span><span class="dgright"><span class="dgsum">'+g.rows.length+' sesiones · '+esc(fmtMonto(g.sum)||"$0")+'</span><span class="chev">▸</span></span></button>'
-      +'<div class="dash-group-body hidden"><div class="table-card"><div class="table-scroll"><table class="ter-table"><thead><tr><th>Fecha atención</th><th>Tipo de Sesión</th><th class="num">Monto</th></tr></thead><tbody>'+items+'</tbody></table></div></div></div>'
+      +'<div class="dash-group-head">'
+        +'<button class="dgh-main" data-toggle><span class="chev">▸</span><span class="dgname">'+esc(g.name)+'</span></button>'
+        +'<div class="dgh-right"><span class="dgsum">'+g.rows.length+' sesiones · '+esc(fmtMonto(g.sum)||"$0")+'</span><button class="btn-wa" data-wa="'+esc(key)+'">Pendientes</button><button class="btn-wa2" data-mes="'+esc(key)+'">Mensual</button></div>'
+      +'</div>'
+      +'<div class="dash-group-body hidden"><div class="table-card"><div class="table-scroll"><table class="ter-table"><thead><tr><th>Fecha atención</th><th>Tipo de Sesión</th><th class="num">Monto</th><th></th></tr></thead><tbody>'+items+'</tbody></table></div></div></div>'
       +'</div>';
   });
   return html;
+}
+function fmtFechaCorta(s){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s)); if(!m)return String(s||""); const meses=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]; return m[3]+" "+(meses[(+m[2])-1]||m[2])+" "+m[1]; }
+function phoneOf(p){ if(!p)return ""; const k=Object.keys(p).find(c=>/telefono|fono|celular|movil|phone/i.test(c)); return k?p[k]:""; }
+function buildWhatsApp(rutKey){
+  const {fechaK,sesK,pagadoK,montoK}=terKeys();
+  const pend=allTerapias.filter(r=>normRut(rOf(r))===rutKey && pagadoK && isUnpaidVal(r[pagadoK]));
+  pend.sort((a,b)=>String(a[fechaK]||"").localeCompare(String(b[fechaK]||"")));
+  const num=x=>Number(x||0).toLocaleString("es-CL");
+  const pendTotal=pend.reduce((a,r)=>a+(Number(r[montoK])||0),0);
+  let msg="Hola!\nEsperando que te encuentres bien,\nte envío un registro sesiones pendiente de pago:\n";
+  msg+="*Total: $"+num(pendTotal)+"*\n\n";
+  pend.forEach((r,i)=>{ msg+=(i+1)+". Sesión: "+fmtFechaCorta(r[fechaK])+", "+(tipoSesion(r,sesK)||"")+", $"+num(r[montoK])+"\n"; });
+  msg+="\n"+BANK_DETAILS+"\n\nSaludos\nBerni";
+  const phone=String(phoneOf(patientsByNorm[rutKey])||"").replace(/\D/g,"");
+  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg), "_blank");
+}
+function openMonthModal(rutKey){
+  monthModalRut=rutKey;
+  const {fechaK}=terKeys();
+  const mine=allTerapias.filter(r=>normRut(rOf(r))===rutKey);
+  const periods=[...new Set(mine.map(r=>periodOf(r[fechaK])).filter(Boolean))].sort().reverse();
+  const nm=patientsByNorm[rutKey]?displayName(patientsByNorm[rutKey]):(mine[0]?nameForRut(rOf(mine[0])):"Paciente");
+  $("#mmTitle").textContent="Resumen mensual — "+nm;
+  $("#mmPeriod").innerHTML = periods.length ? periods.map(p=>'<option value="'+p+'">'+esc(periodLabel(p))+'</option>').join("") : '<option value="">Sin sesiones</option>';
+  $("#monthModal").classList.remove("hidden");
+}
+function buildMonthlyWhatsApp(rutKey, period){
+  const {fechaK,sesK,pagadoK,montoK}=terKeys();
+  const mine=allTerapias.filter(r=>normRut(rOf(r))===rutKey && periodOf(r[fechaK])===period);
+  mine.sort((a,b)=>String(a[fechaK]||"").localeCompare(String(b[fechaK]||"")));
+  const paid=mine.filter(r=>!(pagadoK&&isUnpaidVal(r[pagadoK])));
+  const pend=mine.filter(r=>pagadoK&&isUnpaidVal(r[pagadoK]));
+  const num=x=>Number(x||0).toLocaleString("es-CL");
+  const sum=arr=>arr.reduce((a,r)=>a+(Number(r[montoK])||0),0);
+  let msg="Hola!\nEsperando que te encuentres bien,\nte envío el resumen de sesiones de "+periodLabel(period)+":\n";
+  msg+="*Total: $"+num(sum(mine))+"*\n\n";
+  if(paid.length){ msg+="Sesiones Pagadas: $"+num(sum(paid))+"\n"; paid.forEach((r,i)=>{ msg+=(i+1)+". Sesión: "+fmtFechaCorta(r[fechaK])+", "+(tipoSesion(r,sesK)||"")+", $"+num(r[montoK])+"\n"; }); msg+="\n"; }
+  if(pend.length){ msg+="Sesiones Pendiente de Pago: $"+num(sum(pend))+"\n"; pend.forEach((r,i)=>{ msg+=(i+1)+". Sesión: "+fmtFechaCorta(r[fechaK])+", "+(tipoSesion(r,sesK)||"")+", $"+num(r[montoK])+"\n"; }); msg+="\n"; }
+  msg+=BANK_DETAILS+"\n\nSaludos\nBerni";
+  const phone=String(phoneOf(patientsByNorm[rutKey])||"").replace(/\D/g,"");
+  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
+}
+async function markPaid(id){
+  if(!allTerapias.length) return;
+  const {pagadoK}=terKeys();
+  const idK=Object.keys(allTerapias[0]).find(c=>/^id$/i.test(c));
+  if(!idK||!pagadoK){ toast("No se pudo identificar la sesión",true); return; }
+  const upd={}; upd[pagadoK]=true;
+  const { error }=await sb.from("Terapias").update(upd).eq(idK, id);
+  if(error){ toast("No se pudo marcar como pagada: "+error.message, true); return; }
+  const row=allTerapias.find(r=>String(r[idK])===String(id)); if(row) row[pagadoK]=true;
+  toast("Sesión marcada como pagada");
+  renderDashboard();
 }
 function dashTodasTableHtml(){
   const {fechaK,sesK,montoK}=terKeys();
@@ -737,6 +823,9 @@ function exportDash(type){
   const ws=XLSX.utils.json_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Datos"); XLSX.writeFile(wb,name+".xlsx");
 }
 $("#homeBtn").addEventListener("click",()=>{ if(isPsico) goDashboard(); });
+$("#mmCancel").addEventListener("click",()=>$("#monthModal").classList.add("hidden"));
+$("#monthModal").addEventListener("click",e=>{ if(e.target===$("#monthModal")) $("#monthModal").classList.add("hidden"); });
+$("#mmGenerate").addEventListener("click",()=>{ const p=$("#mmPeriod").value; if(!p)return; const rk=monthModalRut; $("#monthModal").classList.add("hidden"); buildMonthlyWhatsApp(rk,p); });
 
 /* sesión persistente */
 (async ()=>{ if(!sb)return; const { data:{ session } }=await sb.auth.getSession(); if(session)await enterApp(); })();
