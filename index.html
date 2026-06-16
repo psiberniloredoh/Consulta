@@ -8,21 +8,22 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root{
     --paper:#F2F4F0; --card:#FBFCFA; --ink:#1B2A27; --ink-soft:#5C6A64; --ink-faint:#8A958F;
     --accent:#3F6F5F; --accent-deep:#2C5044; --accent-wash:#E7EFEA; --clay:#BF8458;
     --line:#E2E6E0; --line-strong:#CDD4CD; --danger:#A8443B; --danger-wash:#F6E7E5;
-    --radius:14px; --shadow:0 1px 2px rgba(27,42,39,.04), 0 12px 30px rgba(27,42,39,.07);
+    --ok:#2C5044; --radius:14px; --shadow:0 1px 2px rgba(27,42,39,.04), 0 12px 30px rgba(27,42,39,.07);
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
   body{background:var(--paper);color:var(--ink);font-family:"Inter",system-ui,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
   .hidden{display:none !important}
   button{font-family:inherit;cursor:pointer}
-  input{font-family:inherit}
+  input,select{font-family:inherit}
 
-  /* ---------- Login ---------- */
+  /* Login */
   .login-wrap{min-height:100vh;display:grid;place-items:center;padding:24px}
   .login-card{width:100%;max-width:392px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:38px 34px 30px}
   .mark{display:flex;align-items:baseline;gap:9px}
@@ -35,7 +36,9 @@
   .field label{display:block;font-size:12.5px;font-weight:500;color:var(--ink-soft);margin-bottom:6px}
   .field input{width:100%;padding:11px 13px;border:1px solid var(--line-strong);border-radius:10px;background:#fff;color:var(--ink);font-size:14.5px;transition:border-color .15s, box-shadow .15s}
   .field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
-  .btn-primary{width:100%;margin-top:8px;padding:12px 16px;border:none;border-radius:10px;background:var(--accent-deep);color:#fff;font-size:14.5px;font-weight:500;transition:background .15s, transform .05s}
+  .btn-primary{padding:12px 16px;border:none;border-radius:10px;background:var(--accent-deep);color:#fff;font-size:14.5px;font-weight:500;transition:background .15s, transform .05s}
+  .btn-primary.full{width:100%;margin-top:8px}
+  .btn-primary.inline{padding:9px 16px;font-size:13.5px;border-radius:9px}
   .btn-primary:hover{background:#234035}
   .btn-primary:active{transform:translateY(1px)}
   .btn-primary:disabled{opacity:.55;cursor:default}
@@ -46,7 +49,7 @@
   .notice.setup{background:#FBF3E8;color:#8A5A22;border:1px solid #EAD9BF}
   .notice code{font-family:ui-monospace,Menlo,monospace;font-size:12px}
 
-  /* ---------- App shell ---------- */
+  /* Shell */
   .app{min-height:100vh;display:flex;flex-direction:column}
   .topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:13px 24px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
   .top-right{display:flex;align-items:center;gap:16px}
@@ -55,19 +58,17 @@
   .btn-ghost{padding:8px 13px;border:1px solid var(--line-strong);border-radius:9px;background:transparent;color:var(--ink);font-size:13px;font-weight:500;transition:background .15s,border-color .15s}
   .btn-ghost:hover{background:var(--paper);border-color:var(--ink-faint)}
 
-  /* ---------- Patient picker ---------- */
   .picker{position:relative;width:300px;max-width:42vw}
   .picker .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-faint)}
   .picker input{width:100%;padding:10px 13px 10px 37px;border:1px solid var(--line-strong);border-radius:10px;background:#fff;font-size:14px;color:var(--ink);transition:border-color .15s,box-shadow .15s}
   .picker input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
   .picker-menu{position:absolute;top:calc(100% + 6px);left:0;right:0;max-height:340px;overflow-y:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);z-index:30;padding:5px}
   .picker-item{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:9px 11px;border-radius:8px;cursor:pointer}
-  .picker-item:hover,.picker-item.active{background:var(--accent-wash)}
+  .picker-item:hover{background:var(--accent-wash)}
   .pi-name{font-size:14px;font-weight:500;color:var(--ink)}
   .pi-rut{font-size:12px;color:var(--ink-faint);white-space:nowrap}
   .picker-empty{padding:14px 12px;font-size:13px;color:var(--ink-faint);text-align:center}
 
-  /* ---------- Main / states ---------- */
   .main{flex:1;width:100%;max-width:1080px;margin:0 auto;padding:34px 26px 70px}
   .state-empty{margin-top:8vh;text-align:center;color:var(--ink-soft)}
   .state-empty .ring{width:46px;height:46px;border-radius:50%;border:1px solid var(--line-strong);display:grid;place-items:center;margin:0 auto 16px;color:var(--accent)}
@@ -76,11 +77,12 @@
   .spinner{width:24px;height:24px;border-radius:50%;border:2.5px solid var(--line-strong);border-top-color:var(--accent);animation:spin .7s linear infinite;margin:0 auto 16px}
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  /* ---------- Patient view ---------- */
-  .patient-head{margin-bottom:22px}
+  .patient-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap}
   .patient-head .eyebrow{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--accent-deep);margin-bottom:5px}
   .patient-head h2{font-family:"Fraunces",serif;font-weight:500;font-size:30px;letter-spacing:-.015em;margin:0 0 4px}
   .pmeta{font-size:13.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+  .ph-actions{display:flex;align-items:center;gap:8px;padding-top:4px}
+  .edit-actions{display:flex;gap:8px}
 
   .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:24px;overflow-x:auto}
   .tab{position:relative;border:none;background:transparent;padding:11px 14px;font-size:14px;font-weight:500;color:var(--ink-soft);border-radius:8px 8px 0 0;white-space:nowrap}
@@ -95,6 +97,45 @@
   .ficha-item .fk{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);margin-bottom:4px}
   .ficha-item .fv{font-size:15px;color:var(--ink);word-break:break-word}
   .ficha-item .fv.empty{color:var(--ink-faint)}
+  .ficha-item .lock{font-size:11px;color:var(--ink-faint);font-weight:400}
+  .edit-input{width:100%;padding:8px 10px;border:1px solid var(--line-strong);border-radius:8px;background:#fff;color:var(--ink);font-size:14px;transition:border-color .15s,box-shadow .15s}
+  .edit-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-size:13.5px;font-weight:500;padding:11px 18px;border-radius:10px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.err{background:var(--danger)}
+
+  .ter-bar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+  .ter-flabel{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint)}
+  .ter-select{width:auto;min-width:190px}
+  .ter-count{font-size:13px;color:var(--ink-soft);margin-left:auto;font-variant-numeric:tabular-nums}
+  .table-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .table-scroll{overflow-x:auto}
+  .ter-table{border-collapse:collapse;width:100%;font-size:14px}
+  .ter-table thead th{text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);padding:12px 16px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--card)}
+  .ter-table tbody td{padding:12px 16px;border-bottom:1px solid var(--line);color:var(--ink);white-space:nowrap}
+  .ter-table tbody tr:last-child td{border-bottom:none}
+  .ter-table tbody tr:hover{background:var(--accent-wash)}
+  .ter-table tbody tr.row-unpaid{background:#FBF3D4}
+  .ter-table tbody tr.row-unpaid:hover{background:#F4E9BD}
+  .cell-faint{color:var(--ink-faint)}
+
+  .dash-head{margin-bottom:18px}
+  .dash-head .eyebrow{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--accent-deep);margin-bottom:5px}
+  .dash-head h2{font-family:"Fraunces",serif;font-weight:500;font-size:28px;letter-spacing:-.015em;margin:0}
+  .dash-pills{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+  .dpill{border:1px solid var(--line-strong);background:var(--card);color:var(--ink-soft);padding:8px 15px;border-radius:999px;font-size:13.5px;font-weight:500;transition:all .15s}
+  .dpill:hover{border-color:var(--ink-faint);color:var(--ink)}
+  .dpill.active{background:var(--accent-deep);border-color:var(--accent-deep);color:#fff}
+  .dash-bar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+  .dash-bar .ter-count{margin-left:auto}
+  .dash-group{margin-bottom:22px}
+  .dash-group-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px;padding:0 2px}
+  .dgname{font-family:"Fraunces",serif;font-size:17px;font-weight:500;color:var(--ink)}
+  .dgsum{font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+  .ter-table th.num,.ter-table td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .ter-table tbody tr.ter-total td{font-weight:600;background:var(--accent-wash);border-top:2px solid var(--line-strong)}
+  .dash-subcount{font-size:12.5px;color:var(--ink-soft);margin-bottom:8px}
 
   @media (max-width:620px){
     .main{padding:24px 16px 56px}
@@ -107,30 +148,19 @@
 </head>
 <body>
 
-<!-- ============ LOGIN ============ -->
+<!-- LOGIN -->
 <div id="login" class="login-wrap">
   <div class="login-card">
     <div class="mark"><span class="dot"></span><span class="name" id="brand">Portal clínico</span></div>
     <h1>Acceso al portal</h1>
     <p class="sub">Ingresa con tu correo y contraseña para continuar.</p>
-
-    <div id="setupNotice" class="notice setup hidden">
-      Falta configurar la conexión. Completa <code>SUPABASE_URL</code> y <code>SUPABASE_ANON_KEY</code> en el archivo.
-    </div>
+    <div id="setupNotice" class="notice setup hidden">Falta configurar la conexión en el archivo.</div>
     <div id="loginError" class="notice error hidden"></div>
-
     <form id="loginForm" autocomplete="on">
-      <div class="field">
-        <label for="email">Correo</label>
-        <input id="email" type="email" required autocomplete="username" placeholder="[email protected]" />
-      </div>
-      <div class="field">
-        <label for="password">Contraseña</label>
-        <input id="password" type="password" required autocomplete="current-password" placeholder="••••••••" />
-      </div>
-      <button type="submit" class="btn-primary" id="loginBtn">Entrar</button>
+      <div class="field"><label for="email">Correo</label><input id="email" type="email" required autocomplete="username" placeholder="[email protected]" /></div>
+      <div class="field"><label for="password">Contraseña</label><input id="password" type="password" required autocomplete="current-password" placeholder="••••••••" /></div>
+      <button type="submit" class="btn-primary full" id="loginBtn">Entrar</button>
     </form>
-
     <div class="login-foot">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       Acceso restringido. Conexión cifrada.
@@ -138,231 +168,518 @@
   </div>
 </div>
 
-<!-- ============ APP ============ -->
+<!-- APP -->
 <div id="app" class="app hidden">
   <div class="topbar">
-    <div class="mark"><span class="dot"></span><span class="name" id="brand2">Portal clínico</span></div>
+    <div class="mark" id="homeBtn" style="cursor:pointer" title="Ir al panel"><span class="dot"></span><span class="name" id="brand2">Portal clínico</span></div>
     <div class="top-right">
       <div class="picker hidden" id="picker">
         <span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
         <input id="pickerInput" type="text" placeholder="Buscar paciente por nombre…" autocomplete="off" />
         <div class="picker-menu hidden" id="pickerMenu"></div>
       </div>
-      <div class="who">
-        <span class="email" id="userEmail"></span>
-        <button class="btn-ghost" id="logoutBtn">Salir</button>
-      </div>
+      <div class="who"><span class="email" id="userEmail"></span><button class="btn-ghost" id="logoutBtn">Salir</button></div>
     </div>
   </div>
 
   <div class="main">
-    <!-- loading -->
     <div id="loadingState" class="state-empty"><div class="spinner"></div>Cargando…</div>
-
-    <!-- empty / prompt -->
     <div id="emptyState" class="state-empty hidden">
       <div class="ring"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg></div>
-      <div class="big">Elige un paciente</div>
-      <p>Usa el buscador de arriba a la derecha para abrir una ficha.</p>
+      <div class="big">Elige un paciente</div><p>Usa el buscador de arriba a la derecha para abrir una ficha.</p>
     </div>
 
-    <!-- patient detail -->
     <div id="patientView" class="hidden">
       <div class="patient-head">
-        <div class="eyebrow">Paciente</div>
-        <h2 id="pName">—</h2>
-        <div class="pmeta" id="pMeta"></div>
+        <div>
+          <div class="eyebrow">Paciente</div>
+          <h2 id="pName">—</h2>
+          <div class="pmeta" id="pMeta"></div>
+        </div>
+        <div class="ph-actions" id="phActions">
+          <button class="btn-ghost hidden" id="editBtn">Editar</button>
+          <span class="edit-actions hidden" id="editActions">
+            <button class="btn-ghost" id="cancelBtn">Cancelar</button>
+            <button class="btn-primary inline" id="saveBtn">Guardar cambios</button>
+          </span>
+        </div>
       </div>
       <div class="tabs">
         <button class="tab active" data-tab="principal">Información principal</button>
-        <button class="tab" disabled>Terapias <span class="soon">Pronto</span></button>
+        <button class="tab" data-tab="terapias">Terapias</button>
         <button class="tab" disabled>Sesiones <span class="soon">Pronto</span></button>
         <button class="tab" disabled>Cobros <span class="soon">Pronto</span></button>
       </div>
-      <div class="panel" id="panel-principal">
-        <div class="ficha-grid" id="fichaGrid"></div>
-      </div>
+      <div id="panel-principal"><div class="ficha-grid" id="fichaGrid"></div></div>
+      <div id="panel-terapias" class="hidden"></div>
     </div>
+
+    <div id="dashboard" class="hidden"></div>
   </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
-/* ============================================================
-   CONFIGURACIÓN
-   ============================================================ */
+/* ===================== CONFIGURACIÓN ===================== */
 const SUPABASE_URL      = "https://lyhrfpqxsoorakscpszf.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable__TIV3SJKsnymPXs85fzKMQ_qUBu6hsE";
 const TABLE_PACIENTES   = "Pacientes";
 const TABLE_PERFILES    = "PERFILES";
 const PRACTICE_NAME     = "Portal clínico";
-/* ============================================================ */
+
+// Campos de Pacientes que enlazan con una tabla de referencia.
+//   fk    = columna en Pacientes
+//   table = tabla de referencia
+//   key   = columna ID en la tabla de referencia
+// (la columna de nombre a mostrar se detecta sola)
+const LOOKUP_DEFS = [
+  { fk: "ID_COMUNA",          table: "COMUNA",                  key: "ID_COMUNA" },
+  { fk: "ID_SEXO",            table: "SEXO",                    key: "ID_SEXO" },
+  { fk: "ID_ESTABLECIMIENTO", table: "ESTABLECIMIENTO_ESCOLAR", key: "ID_ESTABLECIMIENTO" },
+  { fk: "ID_SESION",          table: "TIPO_SESION",             key: "ID_SESION" },
+];
+/* ======================================================== */
 
 const $ = (s) => document.querySelector(s);
 const configured = !SUPABASE_URL.startsWith("TU_") && !SUPABASE_ANON_KEY.startsWith("TU_");
-
-$("#brand").textContent  = PRACTICE_NAME;
-$("#brand2").textContent = PRACTICE_NAME;
+$("#brand").textContent = PRACTICE_NAME; $("#brand2").textContent = PRACTICE_NAME;
 
 let sb = null;
-if (configured) {
-  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true }
-  });
-} else {
-  $("#setupNotice").classList.remove("hidden");
-}
+if (configured) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ persistSession:true, autoRefreshToken:true } });
+else $("#setupNotice").classList.remove("hidden");
 
-let user = null;
-let patients = [];
+let user = null, patients = [], lookups = {}, currentPatient = null, editing = false, isPsico = false;
+let terapias = [], terapiasPeriodo = "";
+let allTerapias = [], dashSection = "periodo", dashTodasQuery = "", patientsByNorm = {};
 
-/* ---------- helpers ---------- */
+/* helpers */
 const PREFERRED = ["rut","nombre","name","apellido","correo","email","mail","telefono","fono","celular","edad","fecha"];
 function orderColumns(keys){
-  const used = new Set(); const pref = [];
-  PREFERRED.forEach(p => keys.forEach(k => {
-    if (k.toLowerCase().includes(p) && !used.has(k)) { used.add(k); pref.push(k); }
-  }));
-  return [...pref, ...keys.filter(k => !used.has(k))];
+  const used=new Set(), pref=[];
+  PREFERRED.forEach(p=>keys.forEach(k=>{ if(k.toLowerCase().includes(p)&&!used.has(k)){used.add(k);pref.push(k);} }));
+  return [...pref, ...keys.filter(k=>!used.has(k))];
 }
-function prettyKey(k){ return k.replace(/[_-]+/g," ").replace(/\b\w/g, c => c.toUpperCase()); }
-function fmt(v){
-  if (v === null || v === undefined || v === "") return null;
-  if (typeof v === "boolean") return v ? "Sí" : "No";
-  if (typeof v === "object") return JSON.stringify(v);
-  return String(v);
-}
-function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function prettyKey(k){ return k.replace(/[_-]+/g," ").replace(/\b\w/g,c=>c.toUpperCase()); }
+function fmt(v){ if(v===null||v===undefined||v==="")return null; if(typeof v==="boolean")return v?"Sí":"No"; if(typeof v==="object")return JSON.stringify(v); return String(v); }
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function rutOf(p){ return p.RUT ?? p.rut ?? ""; }
+function labelFor(col){ return prettyKey(col).replace(/^id\s+/i,""); }
+function fmtDateMaybe(s){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s)); return m?(m[3]+"-"+m[2]+"-"+m[1]):null; }
+function fmtDateTime(s){ const m=/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(String(s)); return m?(m[3]+"-"+m[2]+"-"+m[1]+" "+m[4]+":"+m[5]):null; }
+function periodOf(s){ const m=/^(\d{4})-(\d{2})/.exec(String(s)); return m?(m[1]+"-"+m[2]):null; }
+function periodLabel(p){ const a=p.split("-"); const meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]; return (meses[(+a[1])-1]||a[1])+" "+a[0]; }
+function cellDisplay(v){ const dt=fmtDateTime(v); if(dt!==null)return dt; const d=fmtDateMaybe(v); if(d!==null)return d; return fmt(v); }
+function isMontoCol(c){ return /precio|monto/i.test(c); }
+function fmtMonto(x){ if(x===null||x===undefined||x==="")return null; const n=Number(x); if(isNaN(n))return fmt(x); return "$"+n.toLocaleString("es-CL"); }
+function isUnpaidVal(v){ return v===false || v===0 || /^(no|false|0)$/i.test(String(v)); }
+function rutVariants(rut){
+  const r=String(rut).trim(); const noDots=r.replace(/\./g,""); const clean=noDots.replace(/-/g,"");
+  const base=[r,noDots,clean];
+  const set=new Set(); base.forEach(x=>{ set.add(x); set.add(x.toUpperCase()); set.add(x.toLowerCase()); });
+  return [...set].filter(Boolean);
+}
+function ageFrom(iso){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso)); if(!m)return null; const b=new Date(+m[1],+m[2]-1,+m[3]); if(isNaN(b))return null; const n=new Date(); let a=n.getFullYear()-b.getFullYear(); const mo=n.getMonth()-b.getMonth(); if(mo<0||(mo===0&&n.getDate()<b.getDate()))a--; return a; }
+function birthCol(p){ return Object.keys(p).find(c=>/nacim/i.test(c)) || null; }
+function birthVal(p){ const c=birthCol(p); return c?p[c]:null; }
+function principalCells(p){
+  const cols=Object.keys(p);
+  const fnac=cols.find(c=>/nacim/i.test(c));
+  const sename=cols.find(c=>/sename/i.test(c));
+  const rutc=cols.find(c=>/^rut$/i.test(c));
+  const nom=cols.find(c=>/nombre/i.test(c));
+  const front=[]; if(rutc)front.push({col:rutc}); if(nom)front.push({col:nom}); if(fnac)front.push({col:fnac}); front.push({edad:true});
+  const placed=new Set([rutc,nom,fnac,sename].filter(Boolean));
+  const middle=cols.filter(c=>!placed.has(c)).map(c=>({col:c}));
+  const end=sename?[{col:sename}]:[];
+  return [...front,...middle,...end];
+}
 function displayName(p){
-  const keys = Object.keys(p);
-  const nameK = keys.find(k => /nombre|name/i.test(k));
-  const lastK = keys.find(k => /apellido/i.test(k));
-  const parts = [];
-  if (nameK) parts.push(p[nameK]);
-  if (lastK) parts.push(p[lastK]);
-  const n = parts.filter(Boolean).join(" ").trim();
+  const keys=Object.keys(p);
+  const nameK=keys.find(k=>/nombre|name/i.test(k));
+  const lastK=keys.find(k=>/apellido/i.test(k));
+  const parts=[]; if(nameK)parts.push(p[nameK]); if(lastK)parts.push(p[lastK]);
+  const n=parts.filter(Boolean).join(" ").trim();
   return n || String(rutOf(p)) || "Paciente";
 }
-
-/* ---------- login ---------- */
-$("#loginForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  if (!sb) return;
-  const err = $("#loginError"); err.classList.add("hidden");
-  const btn = $("#loginBtn"); btn.disabled = true; btn.textContent = "Verificando…";
-  const { error } = await sb.auth.signInWithPassword({
-    email: $("#email").value.trim(), password: $("#password").value
-  });
-  btn.disabled = false; btn.textContent = "Entrar";
-  if (error){ err.textContent = "No pudimos iniciar sesión. Revisa el correo y la contraseña."; err.classList.remove("hidden"); return; }
-  await enterApp();
-});
-$("#logoutBtn").addEventListener("click", async () => {
-  if (sb) await sb.auth.signOut();
-  $("#app").classList.add("hidden");
-  $("#login").classList.remove("hidden");
-  $("#password").value = ""; patients = [];
-});
-
-/* ---------- entrar ---------- */
-async function enterApp(){
-  const { data:{ session } } = await sb.auth.getSession();
-  if (!session) return;
-  user = session.user;
-  $("#userEmail").textContent = user.email || "Sesión activa";
-  $("#login").classList.add("hidden");
-  $("#app").classList.remove("hidden");
-  await loadData();
+function toast(msg, isErr){
+  const t=$("#toast"); t.textContent=msg; t.classList.toggle("err",!!isErr); t.classList.add("show");
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"), 2600);
 }
 
+/* login */
+$("#loginForm").addEventListener("submit", async (e)=>{
+  e.preventDefault(); if(!sb)return;
+  const err=$("#loginError"); err.classList.add("hidden");
+  const btn=$("#loginBtn"); btn.disabled=true; btn.textContent="Verificando…";
+  const { error }=await sb.auth.signInWithPassword({ email:$("#email").value.trim(), password:$("#password").value });
+  btn.disabled=false; btn.textContent="Entrar";
+  if(error){ err.textContent="No pudimos iniciar sesión. Revisa el correo y la contraseña."; err.classList.remove("hidden"); return; }
+  await enterApp();
+});
+$("#logoutBtn").addEventListener("click", async ()=>{
+  if(sb)await sb.auth.signOut();
+  $("#app").classList.add("hidden"); $("#login").classList.remove("hidden");
+  $("#password").value=""; patients=[]; currentPatient=null;
+});
+
+/* entrar */
+async function enterApp(){
+  const { data:{ session } }=await sb.auth.getSession(); if(!session)return;
+  user=session.user; $("#userEmail").textContent=user.email||"Sesión activa";
+  $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
+  await loadData();
+}
 function showState(which){
-  $("#loadingState").classList.toggle("hidden", which !== "loading");
-  $("#emptyState").classList.toggle("hidden", which !== "empty");
-  $("#patientView").classList.toggle("hidden", which !== "patient");
+  $("#loadingState").classList.toggle("hidden", which!=="loading");
+  $("#emptyState").classList.toggle("hidden", which!=="empty");
+  $("#patientView").classList.toggle("hidden", which!=="patient");
+  $("#dashboard").classList.toggle("hidden", which!=="dashboard");
+}
+
+async function loadLookups(){
+  lookups={};
+  for(const cfg of LOOKUP_DEFS){
+    try{
+      const { data }=await sb.from(cfg.table).select("*");
+      if(!data||!data.length) continue;
+      const cols=Object.keys(data[0]);
+      const keyCol=cols.includes(cfg.key)?cfg.key:(cols.find(c=>/id/i.test(c))||cols[0]);
+      const rest=cols.filter(c=>c!==keyCol);
+      const labelCol = rest.find(c=>/nombre|name/i.test(c))
+                    || rest.find(c=>cfg.table.toLowerCase().includes(c.toLowerCase()))
+                    || rest.find(c=>c.toLowerCase().includes(cfg.table.toLowerCase().split("_")[0]))
+                    || rest[0] || keyCol;
+      const byId={}, options=[];
+      data.forEach(r=>{ byId[r[keyCol]]=r[labelCol]; options.push({id:r[keyCol], label:r[labelCol]}); });
+      options.sort((a,b)=>String(a.label??"").localeCompare(String(b.label??"")));
+      lookups[cfg.fk]={ byId, options, keyCol, labelCol };
+    }catch(e){ /* tabla no accesible */ }
+  }
 }
 
 async function loadData(){
   showState("loading");
-
-  // rol del usuario (si la tabla aún no está enlazada, se infiere por cantidad de filas)
-  let rol = null;
-  try {
-    const { data } = await sb.from(TABLE_PERFILES).select("ROL").eq("id", user.id).maybeSingle();
-    if (data) rol = data.ROL;
-  } catch (e) { /* sin enlace todavía */ }
-
-  const { data, error } = await sb.from(TABLE_PACIENTES).select("*");
-  if (error){
-    showState("empty");
-    $("#emptyState").innerHTML = '<div class="big">No se pudieron cargar las fichas</div><p>Revisa que la tabla '+TABLE_PACIENTES+' exista y que las políticas RLS permitan lectura.</p>';
-    return;
-  }
-  patients = data || [];
-  const isPsico = rol === "Psicólogo" || (rol === null && patients.length > 1);
-
-  if (isPsico){
+  let rol=null;
+  try{ const { data }=await sb.from(TABLE_PERFILES).select("ROL").eq("id",user.id).maybeSingle(); if(data)rol=data.ROL; }catch(e){}
+  await loadLookups();
+  const { data, error }=await sb.from(TABLE_PACIENTES).select("*");
+  if(error){ showState("empty"); $("#emptyState").innerHTML='<div class="big">No se pudieron cargar las fichas</div><p>Revisa las políticas RLS de '+TABLE_PACIENTES+'.</p>'; return; }
+  patients=data||[];
+  buildPatientIndex();
+  isPsico = rol==="Psicólogo" || (rol===null && patients.length>1);
+  if(isPsico){
     $("#picker").classList.remove("hidden");
-    if (patients.length === 0){
-      showState("empty");
-      $("#emptyState").innerHTML = '<div class="big">Aún no hay pacientes</div><p>Cuando cargues datos en la tabla, aparecerán aquí.</p>';
-    } else {
-      showState("empty");
-    }
-  } else {
+    allTerapias=await fetchAllTerapias();
+    renderDashboard();
+    showState("dashboard");
+  }else{
     $("#picker").classList.add("hidden");
-    if (patients.length >= 1) selectPatient(patients[0]);
-    else { showState("empty"); $("#emptyState").innerHTML = '<div class="big">Sin ficha disponible</div><p>No encontramos información asociada a tu cuenta.</p>'; }
+    if(patients.length>=1) selectPatient(patients[0]);
+    else { showState("empty"); $("#emptyState").innerHTML='<div class="big">Sin ficha disponible</div><p>No encontramos información asociada a tu cuenta.</p>'; }
   }
 }
 
-/* ---------- picker ---------- */
-const pickerInput = $("#pickerInput");
-const pickerMenu  = $("#pickerMenu");
-
+/* picker */
+const pickerInput=$("#pickerInput"), pickerMenu=$("#pickerMenu");
 function renderMenu(filter){
-  const q = (filter || "").trim().toLowerCase();
-  const list = patients.filter(p => {
-    if (!q) return true;
-    return displayName(p).toLowerCase().includes(q) || String(rutOf(p)).toLowerCase().includes(q);
-  });
-  if (list.length === 0){ pickerMenu.innerHTML = '<div class="picker-empty">Sin coincidencias</div>'; return; }
-  pickerMenu.innerHTML = list.map(p => {
-    const i = patients.indexOf(p);
-    return '<div class="picker-item" data-i="'+i+'"><span class="pi-name">'+esc(displayName(p))+'</span><span class="pi-rut">'+esc(String(rutOf(p)))+'</span></div>';
-  }).join("");
-  pickerMenu.querySelectorAll(".picker-item").forEach(el => {
-    el.addEventListener("mousedown", (ev) => { ev.preventDefault(); selectPatient(patients[+el.dataset.i]); });
-  });
+  const q=(filter||"").trim().toLowerCase();
+  let list=patients.filter(p=>!q||displayName(p).toLowerCase().includes(q)||String(rutOf(p)).toLowerCase().includes(q));
+  list=list.sort((a,b)=>displayName(a).localeCompare(displayName(b),"es",{sensitivity:"base"}));
+  if(!list.length){ pickerMenu.innerHTML='<div class="picker-empty">Sin coincidencias</div>'; return; }
+  pickerMenu.innerHTML=list.map(p=>{ const i=patients.indexOf(p); return '<div class="picker-item" data-i="'+i+'"><span class="pi-name">'+esc(displayName(p))+'</span><span class="pi-rut">'+esc(String(rutOf(p)))+'</span></div>'; }).join("");
+  pickerMenu.querySelectorAll(".picker-item").forEach(el=>el.addEventListener("mousedown",ev=>{ ev.preventDefault(); selectPatient(patients[+el.dataset.i]); }));
 }
-pickerInput.addEventListener("focus", () => { renderMenu(pickerInput.value); pickerMenu.classList.remove("hidden"); });
-pickerInput.addEventListener("input", () => { renderMenu(pickerInput.value); pickerMenu.classList.remove("hidden"); });
-document.addEventListener("click", (e) => { if (!$("#picker").contains(e.target)) pickerMenu.classList.add("hidden"); });
+pickerInput.addEventListener("focus",()=>{ renderMenu(pickerInput.value); pickerMenu.classList.remove("hidden"); });
+pickerInput.addEventListener("input",()=>{ renderMenu(pickerInput.value); pickerMenu.classList.remove("hidden"); });
+document.addEventListener("click",e=>{ if(!$("#picker").contains(e.target)) pickerMenu.classList.add("hidden"); });
 
-/* ---------- seleccionar / ficha ---------- */
+/* seleccionar / render */
 function selectPatient(p){
-  pickerInput.value = displayName(p);
-  pickerMenu.classList.add("hidden");
-  $("#pName").textContent = displayName(p);
-  const rut = rutOf(p);
-  $("#pMeta").textContent = rut ? ("RUT " + rut) : "";
-  renderFicha(p);
+  currentPatient=p; editing=false;
+  pickerInput.value=displayName(p); pickerMenu.classList.add("hidden");
+  $("#pName").textContent=displayName(p);
+  const rut=rutOf(p); $("#pMeta").textContent=rut?("RUT "+rut):"";
+  $("#editActions").classList.add("hidden");
+  renderFicha();
+  setTab("principal");
   showState("patient");
+  $("#panel-terapias").innerHTML='<div class="state-empty" style="margin-top:4vh"><div class="spinner"></div>Cargando terapias…</div>';
+  loadTerapias(p);
 }
-function renderFicha(p){
-  const cols = orderColumns(Object.keys(p));
-  $("#fichaGrid").innerHTML = cols.map(c => {
-    const v = fmt(p[c]);
-    return '<div class="ficha-item"><div class="fk">'+esc(prettyKey(c))+'</div>'
-         + '<div class="fv'+(v===null?' empty':'')+'">'+(v===null?"—":esc(v))+'</div></div>';
+function displayValue(c, raw){
+  if(lookups[c]){ const name=lookups[c].byId[raw]; return fmt(name ?? raw); }
+  const dm=fmtDateMaybe(raw); if(dm!==null) return dm;
+  return fmt(raw);
+}
+function renderFicha(){
+  const p=currentPatient; const cells=principalCells(p);
+  $("#fichaGrid").innerHTML=cells.map(cell=>{
+    if(cell.edad){
+      const a=ageFrom(birthVal(p)); const v=(a===null)?null:(a+" años");
+      return '<div class="ficha-item"><div class="fk">Edad</div><div class="fv'+(v===null?' empty':'')+'">'+(v===null?"—":esc(v))+'</div></div>';
+    }
+    const c=cell.col; const lbl=esc(labelFor(c));
+    if(!editing){
+      const v=displayValue(c,p[c]);
+      return '<div class="ficha-item"><div class="fk">'+lbl+'</div><div class="fv'+(v===null?' empty':'')+'">'+(v===null?"—":esc(v))+'</div></div>';
+    }
+    let ctrl;
+    if(/^rut$/i.test(c)){ ctrl='<div class="fv">'+esc(String(p[c]??""))+' <span class="lock">(no editable)</span></div>'; }
+    else if(lookups[c]){
+      const cur=String(p[c]??"");
+      const opts=lookups[c].options.map(o=>'<option value="'+esc(String(o.id))+'"'+(String(o.id)===cur?' selected':'')+'>'+esc(String(o.label??""))+'</option>').join("");
+      ctrl='<select class="edit-input" data-col="'+esc(c)+'" data-fk="1"><option value="">—</option>'+opts+'</select>';
+    }else if(typeof p[c]==="boolean"){
+      ctrl='<select class="edit-input" data-col="'+esc(c)+'" data-bool="1"><option value="true"'+(p[c]?' selected':'')+'>Sí</option><option value="false"'+(!p[c]?' selected':'')+'>No</option></select>';
+    }else{
+      const val=p[c]==null?"":String(p[c]);
+      const isDate=/^\d{4}-\d{2}-\d{2}$/.test(val);
+      ctrl='<input class="edit-input" data-col="'+esc(c)+'" type="'+(isDate?'date':'text')+'" value="'+esc(val)+'" />';
+    }
+    return '<div class="ficha-item"><div class="fk">'+lbl+'</div>'+ctrl+'</div>';
   }).join("");
 }
 
-/* ---------- sesión persistente ---------- */
-(async () => {
-  if (!sb) return;
-  const { data:{ session } } = await sb.auth.getSession();
-  if (session) await enterApp();
-})();
+/* editar / guardar */
+$("#editBtn").addEventListener("click",()=>{
+  editing=true; renderFicha();
+  $("#editBtn").classList.add("hidden"); $("#editActions").classList.remove("hidden");
+});
+$("#cancelBtn").addEventListener("click",()=>{
+  editing=false; renderFicha();
+  $("#editActions").classList.add("hidden"); $("#editBtn").classList.remove("hidden");
+});
+$("#saveBtn").addEventListener("click", async ()=>{
+  const p=currentPatient; const update={};
+  document.querySelectorAll(".edit-input").forEach(el=>{
+    const col=el.dataset.col; let val=el.value; const orig=p[col];
+    if(el.dataset.fk){ if(val===""){val=null;} else { const o=lookups[col].options.find(x=>String(x.id)===val); val=o?o.id:val; } }
+    else if(el.dataset.bool){ val=(val==="true"); }
+    else { if(val===""){val=null;} else if(typeof orig==="number" && !isNaN(Number(val))){val=Number(val);} }
+    const a=orig==null?"":String(orig); const b=val==null?"":String(val);
+    if(a!==b) update[col]=val;
+  });
+  if(Object.keys(update).length===0){ editing=false; renderFicha(); $("#editActions").classList.add("hidden"); $("#editBtn").classList.remove("hidden"); toast("No hubo cambios"); return; }
+  const btn=$("#saveBtn"); btn.disabled=true; btn.textContent="Guardando…";
+  const rut=rutOf(p);
+  const { data, error }=await sb.from(TABLE_PACIENTES).update(update).eq("RUT",rut).select();
+  btn.disabled=false; btn.textContent="Guardar cambios";
+  if(error){ toast("No se pudo guardar: "+error.message, true); return; }
+  const updated=(data&&data[0])?data[0]:Object.assign({},p,update);
+  const idx=patients.findIndex(x=>rutOf(x)===rut); if(idx>=0)patients[idx]=updated;
+  editing=false;
+  $("#editActions").classList.add("hidden"); $("#editBtn").classList.remove("hidden");
+  selectPatient(updated);
+  toast("Cambios guardados");
+});
+
+/* pestañas */
+function setTab(tab){
+  document.querySelectorAll(".tab[data-tab]").forEach(t=>t.classList.toggle("active", t.dataset.tab===tab));
+  $("#panel-principal").classList.toggle("hidden", tab!=="principal");
+  $("#panel-terapias").classList.toggle("hidden", tab!=="terapias");
+  if(editing){ editing=false; renderFicha(); }
+  $("#editActions").classList.add("hidden");
+  $("#editBtn").classList.toggle("hidden", !(tab==="principal" && isPsico));
+}
+document.querySelectorAll(".tab[data-tab]").forEach(t=>t.addEventListener("click",()=>setTab(t.dataset.tab)));
+
+/* terapias */
+async function loadTerapias(p){
+  terapias=[]; terapiasPeriodo="";
+  try{ const { data }=await sb.from("Terapias").select("*").in("RUT",rutVariants(rutOf(p))).limit(5000); terapias=data||[]; }
+  catch(e){ terapias=[]; }
+  if(currentPatient===p) renderTerapias();
+}
+function terapiaCols(rows){
+  const keys=Object.keys(rows[0]);
+  const rutK=keys.find(c=>/^rut$/i.test(c));
+  const idK=keys.find(c=>/^id$/i.test(c));
+  const fechaK=keys.find(c=>/atenc/i.test(c)) || keys.find(c=>/fecha/i.test(c));
+  const sesK=keys.find(c=>/id[_ ]?sesion/i.test(c));
+  const pagadoK=keys.find(c=>/pagad/i.test(c));
+  const ordered=[];
+  if(fechaK)ordered.push(fechaK);
+  if(sesK)ordered.push(sesK);
+  keys.forEach(c=>{ if(c!==rutK && c!==idK && c!==fechaK && c!==sesK) ordered.push(c); });
+  return {cols:ordered, fechaK, sesK, pagadoK};
+}
+function currentTerapiaRows(){
+  const {fechaK}=terapiaCols(terapias);
+  let rows=terapias.slice();
+  if(terapiasPeriodo && fechaK) rows=rows.filter(r=>periodOf(r[fechaK])===terapiasPeriodo);
+  if(fechaK) rows.sort((a,b)=>String(b[fechaK]||"").localeCompare(String(a[fechaK]||"")));
+  return rows;
+}
+function renderTerapias(){
+  const panel=$("#panel-terapias");
+  if(!terapias.length){ panel.innerHTML='<div class="state-empty" style="margin-top:4vh"><div class="big">Sin terapias registradas</div><p>Este paciente no tiene sesiones en la tabla Terapias.</p></div>'; return; }
+  const {cols,fechaK,sesK,pagadoK}=terapiaCols(terapias);
+  let periodSelect="";
+  if(fechaK){
+    const periods=[...new Set(terapias.map(r=>periodOf(r[fechaK])).filter(Boolean))].sort().reverse();
+    const opts='<option value="">Todos los periodos</option>'+periods.map(p=>'<option value="'+p+'"'+(p===terapiasPeriodo?' selected':'')+'>'+esc(periodLabel(p))+'</option>').join("");
+    periodSelect='<label class="ter-flabel">Periodo</label><select id="terPeriodo" class="edit-input ter-select">'+opts+'</select>';
+  }
+  const rows=currentTerapiaRows();
+  const thead='<tr>'+cols.map(c=>'<th>'+esc(c===sesK?"Tipo de Sesión":(isMontoCol(c)?"Monto":labelFor(c)))+'</th>').join("")+'</tr>';
+  const tbody=rows.map(r=>{
+    const unpaid = pagadoK && isUnpaidVal(r[pagadoK]);
+    const tds=cols.map(c=>{
+      let v;
+      if(c===fechaK){ v=fmtDateTime(r[c]) ?? cellDisplay(r[c]); }
+      else if(c===sesK && lookups["ID_SESION"]){ v=fmt(lookups["ID_SESION"].byId[r[c]] ?? r[c]); }
+      else if(isMontoCol(c)){ v=fmtMonto(r[c]); }
+      else { v=cellDisplay(r[c]); }
+      return v===null?'<td class="cell-faint">—</td>':'<td>'+esc(v)+'</td>';
+    }).join("");
+    return '<tr'+(unpaid?' class="row-unpaid"':'')+'>'+tds+'</tr>';
+  }).join("");
+  panel.innerHTML='<div class="ter-bar">'+periodSelect+'<span class="ter-count">'+rows.length+' '+(rows.length===1?"sesión":"sesiones")+'</span><button class="btn-primary inline" id="terExport">Descargar Excel</button></div>'
+    +'<div class="table-card"><div class="table-scroll"><table class="ter-table"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table></div></div>';
+  const sel=$("#terPeriodo"); if(sel) sel.addEventListener("change",e=>{ terapiasPeriodo=e.target.value; renderTerapias(); });
+  const exp=$("#terExport"); if(exp) exp.addEventListener("click", exportTerapias);
+}
+function exportTerapias(){
+  if(typeof XLSX==="undefined"){ toast("No se pudo cargar el exportador", true); return; }
+  const {cols,fechaK,sesK}=terapiaCols(terapias);
+  const rows=currentTerapiaRows();
+  const data=rows.map(r=>{
+    const o={};
+    cols.forEach(c=>{
+      const header = c===sesK?"Tipo de Sesión":(isMontoCol(c)?"Monto":labelFor(c));
+      let val;
+      if(c===fechaK) val=fmtDateTime(r[c]) ?? r[c];
+      else if(c===sesK && lookups["ID_SESION"]) val=lookups["ID_SESION"].byId[r[c]] ?? r[c];
+      else if(isMontoCol(c)) val=(r[c]==null||r[c]==="")?null:Number(r[c]);
+      else if(typeof r[c]==="boolean") val=r[c]?"Sí":"No";
+      else val=r[c];
+      o[header]=val;
+    });
+    return o;
+  });
+  const ws=XLSX.utils.json_to_sheet(data);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Terapias");
+  const nm=(displayName(currentPatient)||"paciente").replace(/\s+/g,"_");
+  XLSX.writeFile(wb, "terapias_"+nm+".xlsx");
+}
+
+/* dashboard (psicólogo) */
+function normRut(s){ return String(s==null?"":s).replace(/[.\-\s]/g,"").toLowerCase(); }
+function buildPatientIndex(){ patientsByNorm={}; patients.forEach(p=>{ patientsByNorm[normRut(rutOf(p))]=p; }); }
+function nameForRut(rut){ const p=patientsByNorm[normRut(rut)]; return p?displayName(p):String(rut==null?"":rut); }
+function rOf(r){ return r.RUT ?? r.rut ?? r[Object.keys(r).find(c=>/^rut$/i.test(c))]; }
+function tipoSesion(r,sesK){ return sesK && lookups["ID_SESION"] ? (lookups["ID_SESION"].byId[r[sesK]] ?? null) : null; }
+function terKeys(){
+  if(!allTerapias.length) return {};
+  const keys=Object.keys(allTerapias[0]);
+  return {
+    rutK: keys.find(c=>/^rut$/i.test(c)),
+    fechaK: keys.find(c=>/atenc/i.test(c)) || keys.find(c=>/fecha/i.test(c)),
+    sesK: keys.find(c=>/id[_ ]?sesion/i.test(c)),
+    pagadoK: keys.find(c=>/pagad/i.test(c)),
+    montoK: keys.find(c=>/precio|monto/i.test(c)),
+  };
+}
+async function fetchAllTerapias(){
+  const all=[]; let from=0; const size=1000;
+  try{
+    while(true){
+      const { data, error }=await sb.from("Terapias").select("*").range(from, from+size-1);
+      if(error||!data||!data.length) break;
+      all.push(...data);
+      if(data.length<size) break;
+      from+=size; if(from>300000) break;
+    }
+  }catch(e){}
+  return all;
+}
+function goDashboard(){ currentPatient=null; pickerInput.value=""; renderDashboard(); showState("dashboard"); }
+
+function renderDashboard(){
+  const el=$("#dashboard");
+  const pills='<div class="dash-pills">'
+    +'<button class="dpill'+(dashSection==="periodo"?" active":"")+'" data-sec="periodo">Por periodo</button>'
+    +'<button class="dpill'+(dashSection==="impagas"?" active":"")+'" data-sec="impagas">No pagadas</button>'
+    +'<button class="dpill'+(dashSection==="todas"?" active":"")+'" data-sec="todas">Todas las sesiones</button>'
+    +'</div>';
+  let body;
+  if(!allTerapias.length) body='<div class="state-empty" style="margin-top:2vh"><div class="big">Sin sesiones registradas</div><p>Cuando haya datos en Terapias, aquí verás el resumen.</p></div>';
+  else if(dashSection==="impagas") body=dashImpagas();
+  else if(dashSection==="todas") body=dashTodas();
+  else body=dashPeriodo();
+  el.innerHTML='<div class="dash-head"><div class="eyebrow">Panel</div><h2>Resumen general</h2></div>'+pills+'<div>'+body+'</div>';
+  el.querySelectorAll(".dpill").forEach(b=>b.addEventListener("click",()=>{ dashSection=b.dataset.sec; renderDashboard(); }));
+  el.querySelectorAll("[data-export]").forEach(b=>b.addEventListener("click",()=>exportDash(b.dataset.export)));
+  const s=$("#dashSearch"); if(s) s.addEventListener("input",()=>{ dashTodasQuery=s.value; const w=$("#dashTodasWrap"); if(w) w.innerHTML=dashTodasTableHtml(); });
+}
+function dashPeriodo(){
+  const {fechaK, montoK}=terKeys();
+  const map={};
+  allTerapias.forEach(r=>{ const per=periodOf(r[fechaK]); if(!per)return; if(!map[per])map[per]={c:0,s:0}; map[per].c++; map[per].s+=Number(r[montoK])||0; });
+  const periods=Object.keys(map).sort().reverse();
+  let tc=0,ts=0; periods.forEach(p=>{tc+=map[p].c; ts+=map[p].s;});
+  const rows=periods.map(p=>'<tr><td>'+esc(periodLabel(p))+'</td><td class="num">'+map[p].c+'</td><td class="num">'+esc(fmtMonto(map[p].s)||"$0")+'</td></tr>').join("");
+  const total='<tr class="ter-total"><td>Total</td><td class="num">'+tc+'</td><td class="num">'+esc(fmtMonto(ts)||"$0")+'</td></tr>';
+  return '<div class="dash-bar"><span class="ter-count">'+periods.length+' periodos · '+tc+' sesiones</span><button class="btn-primary inline" data-export="periodo">Descargar Excel</button></div>'
+    +'<div class="table-card"><div class="table-scroll"><table class="ter-table"><thead><tr><th>Periodo</th><th class="num">Sesiones</th><th class="num">Monto total</th></tr></thead><tbody>'+rows+total+'</tbody></table></div></div>';
+}
+function dashImpagas(){
+  const {fechaK,sesK,pagadoK,montoK}=terKeys();
+  const unpaid=allTerapias.filter(r=>pagadoK && isUnpaidVal(r[pagadoK]));
+  if(!unpaid.length) return '<div class="state-empty" style="margin-top:2vh"><div class="big">Todo al día</div><p>No hay sesiones pendientes de pago.</p></div>';
+  const groups={};
+  unpaid.forEach(r=>{ const k=normRut(rOf(r)); if(!groups[k])groups[k]={name:nameForRut(rOf(r)),rows:[],sum:0}; groups[k].rows.push(r); groups[k].sum+=Number(r[montoK])||0; });
+  const list=Object.values(groups).sort((a,b)=>b.sum-a.sum);
+  const totalSum=list.reduce((a,g)=>a+g.sum,0);
+  let html='<div class="dash-bar"><span class="ter-count">'+unpaid.length+' sesiones impagas · '+esc(fmtMonto(totalSum)||"$0")+' adeudado</span><button class="btn-primary inline" data-export="impagas">Descargar Excel</button></div>';
+  list.forEach(g=>{
+    g.rows.sort((a,b)=>String(b[fechaK]||"").localeCompare(String(a[fechaK]||"")));
+    const items=g.rows.map(r=>'<tr><td>'+esc(fmtDateTime(r[fechaK])||"—")+'</td><td>'+esc(tipoSesion(r,sesK)||"—")+'</td><td class="num">'+esc(fmtMonto(r[montoK])||"—")+'</td></tr>').join("");
+    html+='<div class="dash-group"><div class="dash-group-head"><span class="dgname">'+esc(g.name)+'</span><span class="dgsum">'+g.rows.length+' sesiones · '+esc(fmtMonto(g.sum)||"$0")+'</span></div>'
+      +'<div class="table-card"><div class="table-scroll"><table class="ter-table"><thead><tr><th>Fecha atención</th><th>Tipo de Sesión</th><th class="num">Monto</th></tr></thead><tbody>'+items+'</tbody></table></div></div></div>';
+  });
+  return html;
+}
+function dashTodasTableHtml(){
+  const {fechaK,sesK,montoK}=terKeys();
+  let rows=allTerapias.slice().sort((a,b)=>String(b[fechaK]||"").localeCompare(String(a[fechaK]||"")));
+  const q=(dashTodasQuery||"").trim().toLowerCase();
+  if(q) rows=rows.filter(r=>nameForRut(rOf(r)).toLowerCase().includes(q));
+  const body=rows.map(r=>'<tr>'
+    +'<td>'+esc(fmtDateTime(r[fechaK])||cellDisplay(r[fechaK])||"—")+'</td>'
+    +'<td>'+esc(nameForRut(rOf(r)))+'</td>'
+    +'<td class="num">'+esc(fmtMonto(r[montoK])||"—")+'</td>'
+    +'<td>'+esc(tipoSesion(r,sesK)||"—")+'</td>'
+    +'</tr>').join("");
+  return '<div class="dash-subcount">'+rows.length+' sesiones</div><div class="table-card"><div class="table-scroll"><table class="ter-table"><thead><tr><th>Fecha atención</th><th>Paciente</th><th class="num">Monto</th><th>Tipo de Sesión</th></tr></thead><tbody>'+body+'</tbody></table></div></div>';
+}
+function dashTodas(){
+  return '<div class="dash-bar"><input id="dashSearch" class="edit-input ter-select" placeholder="Filtrar por paciente…" value="'+esc(dashTodasQuery||"")+'"><button class="btn-primary inline" data-export="todas">Descargar Excel</button></div><div id="dashTodasWrap">'+dashTodasTableHtml()+'</div>';
+}
+function exportDash(type){
+  if(typeof XLSX==="undefined"){ toast("No se pudo cargar el exportador",true); return; }
+  const {fechaK,sesK,montoK,pagadoK}=terKeys();
+  let data=[], name="datos";
+  if(type==="periodo"){
+    const map={}; allTerapias.forEach(r=>{const per=periodOf(r[fechaK]);if(!per)return;if(!map[per])map[per]={c:0,s:0};map[per].c++;map[per].s+=Number(r[montoK])||0;});
+    data=Object.keys(map).sort().reverse().map(p=>({Periodo:periodLabel(p),Sesiones:map[p].c,"Monto total":map[p].s}));
+    name="resumen_por_periodo";
+  } else if(type==="impagas"){
+    data=allTerapias.filter(r=>pagadoK&&isUnpaidVal(r[pagadoK])).sort((a,b)=>String(b[fechaK]||"").localeCompare(String(a[fechaK]||""))).map(r=>({Paciente:nameForRut(rOf(r)),"Fecha atención":fmtDateTime(r[fechaK])||r[fechaK],"Tipo de Sesión":tipoSesion(r,sesK)||"",Monto:(r[montoK]==null||r[montoK]==="")?null:Number(r[montoK])}));
+    name="sesiones_no_pagadas";
+  } else {
+    data=allTerapias.slice().sort((a,b)=>String(b[fechaK]||"").localeCompare(String(a[fechaK]||""))).map(r=>({"Fecha atención":fmtDateTime(r[fechaK])||r[fechaK],Paciente:nameForRut(rOf(r)),Monto:(r[montoK]==null||r[montoK]==="")?null:Number(r[montoK]),"Tipo de Sesión":tipoSesion(r,sesK)||""}));
+    name="todas_las_sesiones";
+  }
+  const ws=XLSX.utils.json_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Datos"); XLSX.writeFile(wb,name+".xlsx");
+}
+$("#homeBtn").addEventListener("click",()=>{ if(isPsico) goDashboard(); });
+
+/* sesión persistente */
+(async ()=>{ if(!sb)return; const { data:{ session } }=await sb.auth.getSession(); if(session)await enterApp(); })();
 </script>
 </body>
 </html>
