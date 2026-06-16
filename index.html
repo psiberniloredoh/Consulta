@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   :root{
     --paper:#F2F4F0; --card:#FBFCFA; --ink:#1B2A27; --ink-soft:#5C6A64; --ink-faint:#8A958F;
@@ -129,8 +130,14 @@
   .dpill.active{background:var(--accent-deep);border-color:var(--accent-deep);color:#fff}
   .dash-bar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
   .dash-bar .ter-count{margin-left:auto}
-  .dash-group{margin-bottom:22px}
-  .dash-group-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px;padding:0 2px}
+  .dash-group{margin-bottom:12px}
+  .dash-group-head{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer;text-align:left;transition:background .15s}
+  .dash-group-head:hover{background:var(--accent-wash)}
+  .dash-group-head .dgright{display:flex;align-items:center;gap:14px}
+  .dash-group-head .chev{color:var(--ink-faint);transition:transform .15s;display:inline-block;font-size:12px}
+  .dash-group-head.open .chev{transform:rotate(90deg)}
+  .dash-group-body{margin-top:8px}
+  .dash-chart{height:300px;margin-bottom:24px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
   .dgname{font-family:"Fraunces",serif;font-size:17px;font-weight:500;color:var(--ink)}
   .dgsum{font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
   .ter-table th.num,.ter-table td.num{text-align:right;font-variant-numeric:tabular-nums}
@@ -614,6 +621,8 @@ function renderDashboard(){
   el.querySelectorAll(".dpill").forEach(b=>b.addEventListener("click",()=>{ dashSection=b.dataset.sec; renderDashboard(); }));
   el.querySelectorAll("[data-export]").forEach(b=>b.addEventListener("click",()=>exportDash(b.dataset.export)));
   const s=$("#dashSearch"); if(s) s.addEventListener("input",()=>{ dashTodasQuery=s.value; const w=$("#dashTodasWrap"); if(w) w.innerHTML=dashTodasTableHtml(); });
+  el.querySelectorAll("[data-toggle]").forEach(b=>b.addEventListener("click",()=>{ const body=b.nextElementSibling; if(body){ body.classList.toggle("hidden"); b.classList.toggle("open"); } }));
+  if(dashSection==="periodo") renderPeriodoChart();
 }
 function dashPeriodo(){
   const {fechaK, montoK}=terKeys();
@@ -621,10 +630,48 @@ function dashPeriodo(){
   allTerapias.forEach(r=>{ const per=periodOf(r[fechaK]); if(!per)return; if(!map[per])map[per]={c:0,s:0}; map[per].c++; map[per].s+=Number(r[montoK])||0; });
   const periods=Object.keys(map).sort().reverse();
   let tc=0,ts=0; periods.forEach(p=>{tc+=map[p].c; ts+=map[p].s;});
-  const rows=periods.map(p=>'<tr><td>'+esc(periodLabel(p))+'</td><td class="num">'+map[p].c+'</td><td class="num">'+esc(fmtMonto(map[p].s)||"$0")+'</td></tr>').join("");
-  const total='<tr class="ter-total"><td>Total</td><td class="num">'+tc+'</td><td class="num">'+esc(fmtMonto(ts)||"$0")+'</td></tr>';
-  return '<div class="dash-bar"><span class="ter-count">'+periods.length+' periodos · '+tc+' sesiones</span><button class="btn-primary inline" data-export="periodo">Descargar Excel</button></div>'
-    +'<div class="table-card"><div class="table-scroll"><table class="ter-table"><thead><tr><th>Periodo</th><th class="num">Sesiones</th><th class="num">Monto total</th></tr></thead><tbody>'+rows+total+'</tbody></table></div></div>';
+  const rows=periods.map(p=>{
+    const avg = map[p].c ? Math.round(map[p].s/map[p].c) : 0;
+    return '<tr><td>'+esc(periodLabel(p))+'</td><td class="num">'+map[p].c+'</td><td class="num">'+esc(fmtMonto(map[p].s)||"$0")+'</td><td class="num">'+esc(fmtMonto(avg)||"$0")+'</td></tr>';
+  }).join("");
+  const avgTot = tc ? Math.round(ts/tc) : 0;
+  const total='<tr class="ter-total"><td>Total</td><td class="num">'+tc+'</td><td class="num">'+esc(fmtMonto(ts)||"$0")+'</td><td class="num">'+esc(fmtMonto(avgTot)||"$0")+'</td></tr>';
+  return '<div class="dash-chart"><canvas id="dashChart"></canvas></div>'
+    +'<div class="dash-bar"><span class="ter-count">'+periods.length+' periodos · '+tc+' sesiones</span><button class="btn-primary inline" data-export="periodo">Descargar Excel</button></div>'
+    +'<div class="table-card"><div class="table-scroll"><table class="ter-table"><thead><tr><th>Periodo</th><th class="num">Sesiones</th><th class="num">Monto total</th><th class="num">Promedio por sesión</th></tr></thead><tbody>'+rows+total+'</tbody></table></div></div>';
+}
+let periodoChart=null;
+function renderPeriodoChart(){
+  if(typeof Chart==="undefined") return;
+  const cv=$("#dashChart"); if(!cv) return;
+  const {fechaK,montoK}=terKeys();
+  const map={};
+  allTerapias.forEach(r=>{ const per=periodOf(r[fechaK]); if(!per)return; if(!map[per])map[per]={c:0,s:0}; map[per].c++; map[per].s+=Number(r[montoK])||0; });
+  const periods=Object.keys(map).sort();
+  const labels=periods.map(p=>periodLabel(p));
+  const montos=periods.map(p=>map[p].s);
+  const sesiones=periods.map(p=>map[p].c);
+  if(periodoChart) periodoChart.destroy();
+  const barLabels={ id:"barLabels", afterDatasetsDraw(chart){
+    const ctx=chart.ctx; const meta=chart.getDatasetMeta(0);
+    ctx.save(); ctx.fillStyle="#fff"; ctx.font="600 11px Inter, system-ui, sans-serif"; ctx.textAlign="center"; ctx.textBaseline="bottom";
+    meta.data.forEach((bar,i)=>{ const n=sesiones[i]; if(n==null)return; if((bar.base-bar.y)<16) return; ctx.fillText(String(n), bar.x, bar.base-5); });
+    ctx.restore();
+  }};
+  periodoChart=new Chart(cv.getContext("2d"),{
+    type:"bar",
+    data:{ labels, datasets:[ { label:"Monto", data:montos, backgroundColor:"#3F6F5F", borderRadius:3 } ] },
+    options:{
+      responsive:true, maintainAspectRatio:false, interaction:{ mode:"index", intersect:false },
+      plugins:{ legend:{ display:false },
+        tooltip:{ callbacks:{ label:c=>"Monto: $"+Number(c.parsed.y).toLocaleString("es-CL"), afterLabel:c=>"Sesiones: "+sesiones[c.dataIndex] } } },
+      scales:{
+        y:{ position:"left", beginAtZero:true, ticks:{ font:{ size:10 }, callback:v=>"$"+Number(v).toLocaleString("es-CL") } },
+        x:{ ticks:{ font:{ size:9 }, maxRotation:60, minRotation:60, autoSkip:false } }
+      }
+    },
+    plugins:[barLabels]
+  });
 }
 function dashImpagas(){
   const {fechaK,sesK,pagadoK,montoK}=terKeys();
@@ -632,14 +679,16 @@ function dashImpagas(){
   if(!unpaid.length) return '<div class="state-empty" style="margin-top:2vh"><div class="big">Todo al día</div><p>No hay sesiones pendientes de pago.</p></div>';
   const groups={};
   unpaid.forEach(r=>{ const k=normRut(rOf(r)); if(!groups[k])groups[k]={name:nameForRut(rOf(r)),rows:[],sum:0}; groups[k].rows.push(r); groups[k].sum+=Number(r[montoK])||0; });
-  const list=Object.values(groups).sort((a,b)=>b.sum-a.sum);
+  const list=Object.values(groups).sort((a,b)=>String(a.name).localeCompare(String(b.name),"es",{sensitivity:"base"}));
   const totalSum=list.reduce((a,g)=>a+g.sum,0);
   let html='<div class="dash-bar"><span class="ter-count">'+unpaid.length+' sesiones impagas · '+esc(fmtMonto(totalSum)||"$0")+' adeudado</span><button class="btn-primary inline" data-export="impagas">Descargar Excel</button></div>';
   list.forEach(g=>{
     g.rows.sort((a,b)=>String(b[fechaK]||"").localeCompare(String(a[fechaK]||"")));
     const items=g.rows.map(r=>'<tr><td>'+esc(fmtDateTime(r[fechaK])||"—")+'</td><td>'+esc(tipoSesion(r,sesK)||"—")+'</td><td class="num">'+esc(fmtMonto(r[montoK])||"—")+'</td></tr>').join("");
-    html+='<div class="dash-group"><div class="dash-group-head"><span class="dgname">'+esc(g.name)+'</span><span class="dgsum">'+g.rows.length+' sesiones · '+esc(fmtMonto(g.sum)||"$0")+'</span></div>'
-      +'<div class="table-card"><div class="table-scroll"><table class="ter-table"><thead><tr><th>Fecha atención</th><th>Tipo de Sesión</th><th class="num">Monto</th></tr></thead><tbody>'+items+'</tbody></table></div></div></div>';
+    html+='<div class="dash-group">'
+      +'<button class="dash-group-head" data-toggle><span class="dgname">'+esc(g.name)+'</span><span class="dgright"><span class="dgsum">'+g.rows.length+' sesiones · '+esc(fmtMonto(g.sum)||"$0")+'</span><span class="chev">▸</span></span></button>'
+      +'<div class="dash-group-body hidden"><div class="table-card"><div class="table-scroll"><table class="ter-table"><thead><tr><th>Fecha atención</th><th>Tipo de Sesión</th><th class="num">Monto</th></tr></thead><tbody>'+items+'</tbody></table></div></div></div>'
+      +'</div>';
   });
   return html;
 }
@@ -665,7 +714,7 @@ function exportDash(type){
   let data=[], name="datos";
   if(type==="periodo"){
     const map={}; allTerapias.forEach(r=>{const per=periodOf(r[fechaK]);if(!per)return;if(!map[per])map[per]={c:0,s:0};map[per].c++;map[per].s+=Number(r[montoK])||0;});
-    data=Object.keys(map).sort().reverse().map(p=>({Periodo:periodLabel(p),Sesiones:map[p].c,"Monto total":map[p].s}));
+    data=Object.keys(map).sort().reverse().map(p=>({Periodo:periodLabel(p),Sesiones:map[p].c,"Monto total":map[p].s,"Promedio por sesión":map[p].c?Math.round(map[p].s/map[p].c):0}));
     name="resumen_por_periodo";
   } else if(type==="impagas"){
     data=allTerapias.filter(r=>pagadoK&&isUnpaidVal(r[pagadoK])).sort((a,b)=>String(b[fechaK]||"").localeCompare(String(a[fechaK]||""))).map(r=>({Paciente:nameForRut(rOf(r)),"Fecha atención":fmtDateTime(r[fechaK])||r[fechaK],"Tipo de Sesión":tipoSesion(r,sesK)||"",Monto:(r[montoK]==null||r[montoK]==="")?null:Number(r[montoK])}));
