@@ -143,6 +143,8 @@
   .ter-table th.num,.ter-table td.num{text-align:right;font-variant-numeric:tabular-nums}
   .ter-table tbody tr.ter-total td{font-weight:600;background:var(--accent-wash);border-top:2px solid var(--line-strong)}
   .dash-subcount{font-size:12.5px;color:var(--ink-soft);margin-bottom:8px}
+  .cal-wrap{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .cal-wrap iframe{display:block;width:100%}
 
   @media (max-width:620px){
     .main{padding:24px 16px 56px}
@@ -234,6 +236,9 @@ const SUPABASE_ANON_KEY = "sb_publishable__TIV3SJKsnymPXs85fzKMQ_qUBu6hsE";
 const TABLE_PACIENTES   = "Pacientes";
 const TABLE_PERFILES    = "PERFILES";
 const PRACTICE_NAME     = "Portal clínico";
+// Enlace de inserción de Google Calendar. Por defecto, el calendario principal.
+// Para usar otro: Google Calendar → Configuración → (tu calendario) → "Integrar calendario" → copia el src del código <iframe>.
+const CALENDAR_EMBED_SRC = "https://calendar.google.com/calendar/embed?src=psiberniloredoh%40gmail.com&ctz=America%2FSantiago";
 
 // Campos de Pacientes que enlazan con una tabla de referencia.
 //   fk    = columna en Pacientes
@@ -611,9 +616,11 @@ function renderDashboard(){
     +'<button class="dpill'+(dashSection==="periodo"?" active":"")+'" data-sec="periodo">Por periodo</button>'
     +'<button class="dpill'+(dashSection==="impagas"?" active":"")+'" data-sec="impagas">No pagadas</button>'
     +'<button class="dpill'+(dashSection==="todas"?" active":"")+'" data-sec="todas">Todas las sesiones</button>'
+    +'<button class="dpill'+(dashSection==="calendario"?" active":"")+'" data-sec="calendario">Calendario</button>'
     +'</div>';
   let body;
-  if(!allTerapias.length) body='<div class="state-empty" style="margin-top:2vh"><div class="big">Sin sesiones registradas</div><p>Cuando haya datos en Terapias, aquí verás el resumen.</p></div>';
+  if(dashSection==="calendario") body=dashCalendario();
+  else if(!allTerapias.length) body='<div class="state-empty" style="margin-top:2vh"><div class="big">Sin sesiones registradas</div><p>Cuando haya datos en Terapias, aquí verás el resumen.</p></div>';
   else if(dashSection==="impagas") body=dashImpagas();
   else if(dashSection==="todas") body=dashTodas();
   else body=dashPeriodo();
@@ -707,6 +714,10 @@ function dashTodasTableHtml(){
 }
 function dashTodas(){
   return '<div class="dash-bar"><input id="dashSearch" class="edit-input ter-select" placeholder="Filtrar por paciente…" value="'+esc(dashTodasQuery||"")+'"><button class="btn-primary inline" data-export="todas">Descargar Excel</button></div><div id="dashTodasWrap">'+dashTodasTableHtml()+'</div>';
+}
+function dashCalendario(){
+  if(!CALENDAR_EMBED_SRC) return '<div class="state-empty" style="margin-top:2vh"><div class="big">Calendario no configurado</div><p>Pega el enlace de inserción de tu Google Calendar en CALENDAR_EMBED_SRC dentro del archivo.</p></div>';
+  return '<div class="cal-wrap"><iframe src="'+esc(CALENDAR_EMBED_SRC)+'" style="border:0" width="100%" height="660" frameborder="0" scrolling="no"></iframe></div>';
 }
 function exportDash(type){
   if(typeof XLSX==="undefined"){ toast("No se pudo cargar el exportador",true); return; }
