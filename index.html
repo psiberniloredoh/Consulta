@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
     --paper:#F2F4F0; --card:#FBFCFA; --ink:#1B2A27; --ink-soft:#5C6A64; --ink-faint:#8A958F;
@@ -149,6 +150,20 @@
   .ter-table tbody tr.ter-total td{font-weight:600;background:var(--accent-wash);border-top:2px solid var(--line-strong)}
   .dash-subcount{font-size:12.5px;color:var(--ink-soft);margin-bottom:8px}
   .cal-wrap{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .modal-card.wide{max-width:960px;width:94vw}
+  .import-body{max-height:62vh;overflow:auto;margin:6px 0 4px;border:1px solid var(--line);border-radius:12px}
+  .imp-table{font-size:13px}
+  .imp-table th,.imp-table td{padding:9px 10px}
+  .imp-table .edit-input{width:100%;min-width:0;box-sizing:border-box;padding:6px 7px;font-size:13px}
+  .imp-table tr.imp-done td{opacity:.5}
+  .imp-badge{display:inline-block;font-size:11px;font-weight:600;color:var(--accent-deep);background:var(--accent-wash);padding:3px 8px;border-radius:999px;white-space:nowrap}
+  .cal-import{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;margin-bottom:16px}
+  .cal-import h3{margin:0 0 4px;font-size:16px}
+  .cal-import .ci-row{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-top:10px}
+  .cal-import label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px}
+  .cal-import input[type=date]{padding:9px 10px;border:1px solid var(--line-strong);border-radius:9px;font-size:13.5px;font-family:inherit}
+  .cal-setup{background:#FBF6EC;border:1px solid #E6D8BD;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13.5px;color:var(--ink-soft)}
+  .cal-setup input{width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid var(--line-strong);border-radius:9px;font-family:inherit;font-size:13px;margin-top:6px}
   .cal-wrap iframe{display:block;width:100%}
   .btn-wa2{background:transparent;border:1px solid #25D366;color:#178a43;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s}
   .btn-wa2:hover{background:#eafaf0}
@@ -170,11 +185,12 @@
   .icon-act.ok:hover{background:var(--accent-wash)}
   .ter-table.master{table-layout:fixed}
   .ter-table.master th,.ter-table.master td{white-space:normal;overflow-wrap:anywhere;padding:11px 12px}
+  .ter-table.master th{white-space:nowrap}
   .ter-table.master td{vertical-align:middle}
   .ter-table.master th:nth-child(1),.ter-table.master td:nth-child(1){width:150px;white-space:nowrap}
   .ter-table.master th:nth-child(3),.ter-table.master td:nth-child(3){width:86px}
-  .ter-table.master th:nth-child(4),.ter-table.master td:nth-child(4){width:68px}
-  .ter-table.master th:nth-child(5),.ter-table.master td:nth-child(5){width:116px}
+  .ter-table.master th:nth-child(4),.ter-table.master td:nth-child(4){width:86px}
+  .ter-table.master th:nth-child(5),.ter-table.master td:nth-child(5){width:128px}
   .ter-table.master th:nth-child(6),.ter-table.master td:nth-child(6){width:150px}
   .ter-table.master th:nth-child(7),.ter-table.master td:nth-child(7){width:76px}
   .ter-table.master .row-actions{padding-left:4px;padding-right:6px}
@@ -284,6 +300,18 @@
   </div>
 </div>
 
+<div class="modal-scrim hidden" id="importModal">
+  <div class="modal-card wide">
+    <h3>Revisar citas del calendario</h3>
+    <p class="mm-sub" id="importCount">—</p>
+    <div id="importBody" class="import-body"></div>
+    <div class="mm-actions">
+      <button class="btn-ghost" id="importCancel">Cancelar</button>
+      <button class="btn-primary inline" id="importConfirm" disabled>Traspasar a Terapias</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -296,6 +324,10 @@ const PRACTICE_NAME     = "Portal clínico";
 // Enlace de inserción de Google Calendar. Por defecto, el calendario principal.
 // Para usar otro: Google Calendar → Configuración → (tu calendario) → "Integrar calendario" → copia el src del código <iframe>.
 const CALENDAR_EMBED_SRC = "https://calendar.google.com/calendar/embed?src=psiberniloredoh%40gmail.com&ctz=America%2FSantiago";
+// Calendario desde el que se leen las citas para traspasar a Terapias.
+const GOOGLE_CALENDAR_ID = "psiberniloredoh@gmail.com";
+// ID de cliente de Google (público; identifica esta app ante Google).
+const GOOGLE_CLIENT_ID = "25616764442-5nl7718h5ce4c81r97ka33vtq1gbhd9c.apps.googleusercontent.com";
 // Datos bancarios que se incluyen en el borrador de WhatsApp de cobro.
 const BANK_DETAILS = "Datos Bancarios\nBernardita Loredo\n17.995.068-5\nBanco Chile\nCuenta corriente\n8250029007\nbernardita.loredo.h@mail.pucv.cl";
 
@@ -323,6 +355,7 @@ else $("#setupNotice").classList.remove("hidden");
 let user = null, patients = [], lookups = {}, currentPatient = null, editing = false, isPsico = false;
 let terapias = [], terapiasPeriodo = "";
 let allTerapias = [], dashSection = "periodo", dashTodasQuery = "", patientsByNorm = {}, monthModalRut = "", monthModalChannel = "wa";
+let googleToken = "", tokenClient = null, importRows = [];
 const WA_SVG='<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 18.15h-.01c-1.52 0-3.01-.41-4.3-1.18l-.31-.18-3.19.84.85-3.11-.2-.32a8.2 8.2 0 0 1-1.26-4.39c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.82 2.42a8.16 8.16 0 0 1 2.41 5.82c0 4.54-3.7 8.23-8.25 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.16-.25.25-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.11-.22-.17-.47-.29z"/></svg>';
 const MAIL_SVG='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
 const PENCIL_SVG='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
@@ -701,6 +734,7 @@ function renderDashboard(){
   el.querySelectorAll("[data-mailmes]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); openMonthModal(b.dataset.mailmes,"email"); }));
   el.querySelectorAll("[data-pay]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); markPaid(b.dataset.pay); }));
   if(dashSection==="todas") wireTodas();
+  if(dashSection==="calendario") wireCalendario();
   if(dashSection==="periodo") renderPeriodoChart();
 }
 function dashPeriodo(){
@@ -941,9 +975,175 @@ async function deleteTodasRow(id){
 function dashTodas(){
   return '<div class="dash-bar"><input id="dashSearch" class="edit-input ter-select" placeholder="Filtrar por paciente…" value="'+esc(dashTodasQuery||"")+'"><button class="btn-primary inline" data-export="todas">Descargar Excel</button></div><div id="dashTodasWrap">'+dashTodasTableHtml()+'</div>';
 }
+function gcalSavedClientId(){ try{ const v=localStorage.getItem("gcalClientId"); if(v) return v; }catch(e){} return GOOGLE_CLIENT_ID; }
 function dashCalendario(){
-  if(!CALENDAR_EMBED_SRC) return '<div class="state-empty" style="margin-top:2vh"><div class="big">Calendario no configurado</div><p>Pega el enlace de inserción de tu Google Calendar en CALENDAR_EMBED_SRC dentro del archivo.</p></div>';
-  return '<div class="cal-wrap"><iframe src="'+esc(CALENDAR_EMBED_SRC)+'" style="border:0" width="100%" height="660" frameborder="0" scrolling="no"></iframe></div>';
+  const pad=n=>String(n).padStart(2,"0");
+  const fmtD=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+  const today=new Date(); const hasta=fmtD(today);
+  const d7=new Date(today); d7.setDate(d7.getDate()-7); const desde=fmtD(d7);
+  const cid=gcalSavedClientId();
+  let setup="";
+  if(!cid){
+    setup='<div class="cal-setup"><strong>Conectar con Google (una sola vez).</strong> Pega aquí tu <em>ID de cliente</em> de Google (termina en <code>.apps.googleusercontent.com</code>), siguiendo los pasos que te indiqué.'
+      +'<input id="gcalClientId" placeholder="xxxx.apps.googleusercontent.com" value="">'
+      +'<div style="margin-top:8px"><button class="btn-primary inline" id="gcalSaveId">Guardar ID</button></div></div>';
+  }
+  const importCard='<div class="cal-import"><h3>Traer citas a Terapias</h3>'
+    +'<p class="mm-sub" style="margin:0">Lee las citas del calendario en el rango elegido; las revisas y traspasas solo las que correspondan.</p>'
+    +setup
+    +'<div class="ci-row">'
+    +'<div><label>Desde</label><input type="date" id="gcalDesde" value="'+desde+'"></div>'
+    +'<div><label>Hasta</label><input type="date" id="gcalHasta" value="'+hasta+'"></div>'
+    +'<button class="btn-primary inline" id="gcalFetch"'+(cid?'':' disabled')+'>Traer citas del calendario</button>'
+    +(cid?'<button class="btn-ghost" id="gcalChangeId" style="margin-left:auto">Cambiar cuenta de Google</button>':'')
+    +'</div></div>';
+  const iframe = CALENDAR_EMBED_SRC ? '<div class="cal-wrap"><iframe src="'+esc(CALENDAR_EMBED_SRC)+'" style="border:0" width="100%" height="600" frameborder="0" scrolling="no"></iframe></div>' : '';
+  return importCard+iframe;
+}
+function wireCalendario(){
+  const save=$("#gcalSaveId"); if(save) save.addEventListener("click",()=>{ const v=($("#gcalClientId").value||"").trim(); if(!v){ toast("Pega el ID de cliente",true); return; } try{ localStorage.setItem("gcalClientId",v); }catch(e){} toast("ID guardado"); renderDashboard(); });
+  const chg=$("#gcalChangeId"); if(chg) chg.addEventListener("click",()=>{ try{ localStorage.removeItem("gcalClientId"); }catch(e){} googleToken=""; tokenClient=null; renderDashboard(); });
+  const f=$("#gcalFetch"); if(f) f.addEventListener("click", traerCitas);
+}
+function normTxt(s){ return String(s==null?"":s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim(); }
+function matchPatientByTitle(title){
+  const t=normTxt(title); let best=null, bestScore=0;
+  patients.forEach(p=>{
+    const toks=normTxt(displayName(p)).split(" ").filter(w=>w.length>=3);
+    if(!toks.length) return;
+    let hit=0; toks.forEach(w=>{ if(t.includes(w)) hit++; });
+    const enough=(hit>=2)||(toks.length===1&&hit===1);
+    const score=hit/toks.length;
+    if(enough && score>bestScore){ bestScore=score; best=p; }
+  });
+  return best;
+}
+function tipoIdFromText(txt){
+  const t=normTxt(txt);
+  const opts=(lookups["ID_SESION"]&&lookups["ID_SESION"].options)||[];
+  const find=kw=>{ const o=opts.find(o=>normTxt(o.label).includes(kw)); return o?o.id:null; };
+  if(/anamnesis/.test(t)) return find("anamnesis");
+  if(/coordinacion/.test(t)) return find("coordinacion");
+  if(/padre/.test(t)) return find("padre");
+  const ter=find("terapia"); return ter!=null?ter:(opts[0]?opts[0].id:null);
+}
+function lastMontoFor(rut){
+  const c=terMasterCols();
+  const rows=allTerapias.filter(r=>normRut(rOf(r))===normRut(rut) && r[c.montoK]!=null && r[c.montoK]!=="");
+  if(!rows.length) return "";
+  rows.sort((a,b)=>String(b[c.fechaK]||"").localeCompare(String(a[c.fechaK]||"")));
+  return rows[0][c.montoK];
+}
+function dtToStorage(iso){
+  if(!iso) return null;
+  const d=new Date(iso);
+  if(isNaN(d.getTime())){ const m=/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(String(iso)); return m?(m[1]+"-"+m[2]+"-"+m[3]+" "+m[4]+":"+m[5]+":00"):null; }
+  const p=n=>String(n).padStart(2,"0");
+  return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+" "+p(d.getHours())+":"+p(d.getMinutes())+":00";
+}
+function ensureTokenClient(){
+  const cid=gcalSavedClientId();
+  if(!cid){ toast("Falta el ID de cliente de Google",true); return null; }
+  if(!(window.google&&google.accounts&&google.accounts.oauth2)){ toast("Cargando Google… intenta de nuevo en unos segundos",true); return null; }
+  if(!tokenClient || tokenClient._cid!==cid){
+    tokenClient=google.accounts.oauth2.initTokenClient({
+      client_id:cid,
+      scope:"https://www.googleapis.com/auth/calendar.events.readonly",
+      callback:(resp)=>{ if(resp&&resp.access_token){ googleToken=resp.access_token; fetchCalendarEvents(); } else { toast("No se pudo conectar con Google",true); } }
+    });
+    tokenClient._cid=cid;
+  }
+  return tokenClient;
+}
+function traerCitas(){
+  const tc=ensureTokenClient(); if(!tc) return;
+  const b=$("#gcalFetch"); if(b){ b.disabled=true; b.textContent="Conectando…"; setTimeout(()=>{ if(b){b.disabled=false;b.textContent="Traer citas del calendario";} },4000); }
+  tc.requestAccessToken();
+}
+async function fetchCalendarEvents(){
+  const desde=$("#gcalDesde")?$("#gcalDesde").value:"", hasta=$("#gcalHasta")?$("#gcalHasta").value:"";
+  if(!desde||!hasta){ toast("Elige el rango de fechas",true); return; }
+  const timeMin=new Date(desde+"T00:00:00").toISOString();
+  const timeMax=new Date(hasta+"T23:59:59").toISOString();
+  const url="https://www.googleapis.com/calendar/v3/calendars/"+encodeURIComponent(GOOGLE_CALENDAR_ID)+"/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin="+encodeURIComponent(timeMin)+"&timeMax="+encodeURIComponent(timeMax);
+  let data;
+  try{
+    const r=await fetch(url,{ headers:{ Authorization:"Bearer "+googleToken } });
+    if(!r.ok){ console.error(await r.text()); toast("No se pudo leer el calendario ("+r.status+")",true); return; }
+    data=await r.json();
+  }catch(e){ toast("Error de conexión con el calendario",true); return; }
+  buildImportReview(data.items||[]);
+}
+function buildImportReview(items){
+  const importedIds=new Set(allTerapias.map(r=>r.ID_EVENTO).filter(Boolean));
+  importRows=items.filter(ev=>ev.status!=="cancelled").map(ev=>{
+    const startDT=ev.start&&(ev.start.dateTime||(ev.start.date?ev.start.date+"T00:00:00":""));
+    const allDay=!!(ev.start&&ev.start.date&&!ev.start.dateTime);
+    const title=ev.summary||"(sin título)";
+    const text=title+" "+(ev.description||"");
+    const p=matchPatientByTitle(title);
+    const tipoId=tipoIdFromText(text);
+    const already=importedIds.has(ev.id);
+    const rut=p?rutOf(p):"";
+    return { eventId:ev.id, startDT, allDay, title, rut, tipoId:tipoId!=null?String(tipoId):"", monto:p?String(lastMontoFor(rut)||""):"", already, include:!!p&&!already&&!allDay };
+  });
+  renderImportModal();
+}
+function renderImportModal(){
+  const total=importRows.length;
+  const opts=patients.slice().sort((a,b)=>normTxt(displayName(a)).localeCompare(normTxt(displayName(b)))).map(p=>({rut:rutOf(p),name:displayName(p)}));
+  const patOpts=sel=>'<option value="">— elegir —</option>'+opts.map(o=>'<option value="'+esc(o.rut)+'"'+(normRut(o.rut)===normRut(sel)?' selected':'')+'>'+esc(o.name)+'</option>').join("");
+  const tipoOpts=sel=>((lookups["ID_SESION"]&&lookups["ID_SESION"].options)||[]).map(o=>'<option value="'+esc(String(o.id))+'"'+(String(o.id)===String(sel)?' selected':'')+'>'+esc(String(o.label??""))+'</option>').join("");
+  const body=importRows.map((row,i)=>{
+    const dis=row.already;
+    const fechaTxt=fmtDateTime(dtToStorage(row.startDT))||"—";
+    return '<tr class="'+(row.already?'imp-done':'')+'">'
+      +'<td style="text-align:center"><input type="checkbox" data-imp-inc="'+i+'"'+(row.include?' checked':'')+(dis?' disabled':'')+'></td>'
+      +'<td style="white-space:nowrap">'+esc(fechaTxt)+'</td>'
+      +'<td>'+esc(row.title)+'</td>'
+      +'<td><select class="edit-input" data-imp-rut="'+i+'"'+(dis?' disabled':'')+'>'+patOpts(row.rut)+'</select></td>'
+      +'<td><select class="edit-input" data-imp-tipo="'+i+'"'+(dis?' disabled':'')+'>'+tipoOpts(row.tipoId)+'</select></td>'
+      +'<td><input class="edit-input" data-imp-monto="'+i+'" type="text" value="'+esc(row.monto)+'"'+(dis?' disabled':'')+'></td>'
+      +'<td>'+(row.already?'<span class="imp-badge">ya en Terapias</span>':'')+'</td>'
+      +'</tr>';
+  }).join("");
+  const head='<tr><th></th><th>Fecha</th><th>Cita</th><th>Paciente</th><th>Tipo</th><th>Monto</th><th></th></tr>';
+  $("#importBody").innerHTML = total ? '<table class="ter-table master imp-table"><thead>'+head+'</thead><tbody>'+body+'</tbody></table>' : '<p class="mm-sub" style="padding:14px">No se encontraron citas en ese rango.</p>';
+  $("#importCount").textContent = total+(total===1?" cita encontrada":" citas encontradas");
+  const w=$("#importBody");
+  w.querySelectorAll("[data-imp-inc]").forEach(el=>el.addEventListener("change",()=>{ importRows[+el.dataset.impInc].include=el.checked; updateImportBtn(); }));
+  w.querySelectorAll("[data-imp-rut]").forEach(el=>el.addEventListener("change",()=>{ importRows[+el.dataset.impRut].rut=el.value; updateImportBtn(); }));
+  w.querySelectorAll("[data-imp-tipo]").forEach(el=>el.addEventListener("change",()=>{ importRows[+el.dataset.impTipo].tipoId=el.value; }));
+  w.querySelectorAll("[data-imp-monto]").forEach(el=>el.addEventListener("input",()=>{ importRows[+el.dataset.impMonto].monto=el.value; }));
+  updateImportBtn();
+  $("#importModal").classList.remove("hidden");
+}
+function updateImportBtn(){
+  const n=importRows.filter(r=>r.include&&r.rut&&!r.already).length;
+  const b=$("#importConfirm"); if(b){ b.textContent="Traspasar "+n+" a Terapias"; b.disabled=n===0; }
+}
+async function confirmImport(){
+  const c=terMasterCols();
+  const toAdd=importRows.filter(r=>r.include&&r.rut&&!r.already);
+  if(!toAdd.length){ toast("No hay citas seleccionadas",true); return; }
+  let maxId=0; allTerapias.forEach(r=>{ const v=Number(r[c.idK]); if(!isNaN(v)&&v>maxId)maxId=v; });
+  const rows=toAdd.map((r,k)=>{
+    const o={};
+    if(c.idK) o[c.idK]=maxId+1+k;
+    o.RUT=r.rut;
+    if(c.fechaK) o[c.fechaK]=dtToStorage(r.startDT);
+    if(c.sesK && r.tipoId!=="") o[c.sesK]= isNaN(Number(r.tipoId))?r.tipoId:Number(r.tipoId);
+    if(c.montoK) o[c.montoK]= r.monto===""?null:(isNaN(Number(r.monto))?r.monto:Number(r.monto));
+    if(c.pagadoK) o[c.pagadoK]=false;
+    o.ID_EVENTO=r.eventId;
+    return o;
+  });
+  const b=$("#importConfirm"); if(b){ b.disabled=true; b.textContent="Traspasando…"; }
+  const { data, error }=await sb.from("Terapias").insert(rows).select();
+  if(error){ toast("No se pudo traspasar: "+error.message,true); if(b){ b.disabled=false; } updateImportBtn(); return; }
+  (data&&data.length?data:rows).forEach(r=>allTerapias.push(r));
+  $("#importModal").classList.add("hidden");
+  toast(rows.length+(rows.length===1?" sesión agregada":" sesiones agregadas")+" a Terapias");
 }
 function exportDash(type){
   if(typeof XLSX==="undefined"){ toast("No se pudo cargar el exportador",true); return; }
@@ -974,6 +1174,9 @@ $("#homeBtn").addEventListener("click",()=>{ if(isPsico) goDashboard(); });
 $("#mmCancel").addEventListener("click",()=>$("#monthModal").classList.add("hidden"));
 $("#monthModal").addEventListener("click",e=>{ if(e.target===$("#monthModal")) $("#monthModal").classList.add("hidden"); });
 $("#mmGenerate").addEventListener("click",()=>{ const p=$("#mmPeriod").value; if(!p)return; const rk=monthModalRut, ch=monthModalChannel; $("#monthModal").classList.add("hidden"); if(ch==="email") emailMensual(rk,p); else buildMonthlyWhatsApp(rk,p); });
+$("#importCancel").addEventListener("click",()=>$("#importModal").classList.add("hidden"));
+$("#importModal").addEventListener("click",e=>{ if(e.target===$("#importModal")) $("#importModal").classList.add("hidden"); });
+$("#importConfirm").addEventListener("click",confirmImport);
 
 /* sesión persistente */
 (async ()=>{ if(!sb)return; const { data:{ session } }=await sb.auth.getSession(); if(session)await enterApp(); })();
