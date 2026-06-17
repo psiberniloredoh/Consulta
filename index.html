@@ -56,7 +56,7 @@
   .topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:13px 24px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
   .top-right{display:flex;align-items:center;gap:16px}
   .who{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-soft)}
-  .who .email{font-weight:500;color:var(--ink);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .who .email{font-weight:500;color:var(--ink);max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .btn-ghost{padding:8px 13px;border:1px solid var(--line-strong);border-radius:9px;background:transparent;color:var(--ink);font-size:13px;font-weight:500;transition:background .15s,border-color .15s}
   .btn-ghost:hover{background:var(--paper);border-color:var(--ink-faint)}
 
@@ -193,6 +193,9 @@
   .ter-table.master th:nth-child(5),.ter-table.master td:nth-child(5){width:128px}
   .ter-table.master th:nth-child(6),.ter-table.master td:nth-child(6){width:150px}
   .ter-table.master th:nth-child(7),.ter-table.master td:nth-child(7){width:76px}
+  .ter-table.master.tpat th:nth-child(2),.ter-table.master.tpat td:nth-child(2){width:150px}
+  .ter-table.master.tpat th:nth-child(5),.ter-table.master.tpat td:nth-child(5){width:150px}
+  .ter-table.master.tpat th:nth-child(6),.ter-table.master.tpat td:nth-child(6){width:auto}
   .ter-table.master .row-actions{padding-left:4px;padding-right:6px}
   .ter-table.master .edit-input{width:100%;min-width:0;box-sizing:border-box;padding:6px 7px;font-size:13px}
   .ter-table.master input[type=datetime-local]{min-width:0;font-size:12px;padding:6px 4px}
@@ -277,8 +280,6 @@
       <div class="tabs">
         <button class="tab active" data-tab="principal">Información principal</button>
         <button class="tab" data-tab="terapias">Terapias</button>
-        <button class="tab" disabled>Sesiones <span class="soon">Pronto</span></button>
-        <button class="tab" disabled>Cobros <span class="soon">Pronto</span></button>
       </div>
       <div id="panel-principal"><div class="ficha-grid" id="fichaGrid"></div></div>
       <div id="panel-terapias" class="hidden"></div>
@@ -353,7 +354,7 @@ if (configured) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KE
 else $("#setupNotice").classList.remove("hidden");
 
 let user = null, patients = [], lookups = {}, currentPatient = null, editing = false, isPsico = false;
-let terapias = [], terapiasPeriodo = "";
+let terapias = [], terapiasPeriodo = "", terEditId = null;
 let allTerapias = [], dashSection = "periodo", dashTodasQuery = "", patientsByNorm = {}, monthModalRut = "", monthModalChannel = "wa";
 let googleToken = "", tokenClient = null, importRows = [];
 const WA_SVG='<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 18.15h-.01c-1.52 0-3.01-.41-4.3-1.18l-.31-.18-3.19.84.85-3.11-.2-.32a8.2 8.2 0 0 1-1.26-4.39c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.82 2.42a8.16 8.16 0 0 1 2.41 5.82c0 4.54-3.7 8.23-8.25 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.16-.25.25-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.11-.22-.17-.47-.29z"/></svg>';
@@ -598,7 +599,7 @@ document.querySelectorAll(".tab[data-tab]").forEach(t=>t.addEventListener("click
 
 /* terapias */
 async function loadTerapias(p){
-  terapias=[]; terapiasPeriodo="";
+  terapias=[]; terapiasPeriodo=""; terEditId=null;
   try{ const { data }=await sb.from("Terapias").select("*").in("RUT",rutVariants(rutOf(p))).limit(5000); terapias=data||[]; }
   catch(e){ terapias=[]; }
   if(currentPatient===p) renderTerapias();
@@ -626,50 +627,107 @@ function currentTerapiaRows(){
 function renderTerapias(){
   const panel=$("#panel-terapias");
   if(!terapias.length){ panel.innerHTML='<div class="state-empty" style="margin-top:4vh"><div class="big">Sin terapias registradas</div><p>Este paciente no tiene sesiones en la tabla Terapias.</p></div>'; return; }
-  const {cols,fechaK,sesK,pagadoK}=terapiaCols(terapias);
+  const c=terColsFrom(terapias[0]||{});
   let periodSelect="";
-  if(fechaK){
-    const periods=[...new Set(terapias.map(r=>periodOf(r[fechaK])).filter(Boolean))].sort().reverse();
+  if(c.fechaK){
+    const periods=[...new Set(terapias.map(r=>periodOf(r[c.fechaK])).filter(Boolean))].sort().reverse();
     const opts='<option value="">Todos los periodos</option>'+periods.map(p=>'<option value="'+p+'"'+(p===terapiasPeriodo?' selected':'')+'>'+esc(periodLabel(p))+'</option>').join("");
     periodSelect='<label class="ter-flabel">Periodo</label><select id="terPeriodo" class="edit-input ter-select">'+opts+'</select>';
   }
   const rows=currentTerapiaRows();
-  const thead='<tr>'+cols.map(c=>'<th>'+esc(c===sesK?"Tipo de Sesión":(isMontoCol(c)?"Monto":labelFor(c)))+'</th>').join("")+'</tr>';
-  const tbody=rows.map(r=>{
-    const unpaid = pagadoK && isUnpaidVal(r[pagadoK]);
-    const tds=cols.map(c=>{
-      let v;
-      if(c===fechaK){ v=fmtDateTime(r[c]) ?? cellDisplay(r[c]); }
-      else if(c===sesK && lookups["ID_SESION"]){ v=fmt(lookups["ID_SESION"].byId[r[c]] ?? r[c]); }
-      else if(isMontoCol(c)){ v=fmtMonto(r[c]); }
-      else { v=cellDisplay(r[c]); }
-      return v===null?'<td class="cell-faint">—</td>':'<td>'+esc(v)+'</td>';
-    }).join("");
-    return '<tr'+(unpaid?' class="row-unpaid"':'')+'>'+tds+'</tr>';
+  const thead='<tr><th>Fecha atención</th><th>Tipo de Sesión</th><th class="num">Monto</th><th>Pagado</th><th>Tema Principal</th><th>Comentarios</th><th></th></tr>';
+  const body=rows.map(r=>{
+    const id=c.idK?r[c.idK]:null;
+    return (id!=null && String(id)===String(terEditId)) ? terRowEditHtml(r,c,id) : terRowViewHtml(r,c,id);
   }).join("");
   panel.innerHTML='<div class="ter-bar">'+periodSelect+'<span class="ter-count">'+rows.length+' '+(rows.length===1?"sesión":"sesiones")+'</span><button class="btn-primary inline" id="terExport">Descargar Excel</button></div>'
-    +'<div class="table-card"><div class="table-scroll"><table class="ter-table"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table></div></div>';
-  const sel=$("#terPeriodo"); if(sel) sel.addEventListener("change",e=>{ terapiasPeriodo=e.target.value; renderTerapias(); });
+    +'<div class="table-card"><div class="table-scroll"><table class="ter-table master tpat"><thead>'+thead+'</thead><tbody>'+body+'</tbody></table></div></div>';
+  const sel=$("#terPeriodo"); if(sel) sel.addEventListener("change",e=>{ terapiasPeriodo=e.target.value; terEditId=null; renderTerapias(); });
   const exp=$("#terExport"); if(exp) exp.addEventListener("click", exportTerapias);
+  wireTerEdit();
+}
+function terRowViewHtml(r,c,id){
+  const tipo=(c.sesK&&lookups["ID_SESION"])?(lookups["ID_SESION"].byId[r[c.sesK]]??""):"";
+  const pagado=c.pagadoK?(isUnpaidVal(r[c.pagadoK])?"No":"Sí"):"";
+  const unpaid=c.pagadoK&&isUnpaidVal(r[c.pagadoK]);
+  const cell=v=>(v===null||v===undefined||v==="")?'<td class="cell-faint">—</td>':'<td>'+esc(v)+'</td>';
+  return '<tr'+(unpaid?' class="row-unpaid"':'')+'>'
+    +'<td>'+esc(fmtDateTime(r[c.fechaK])||cellDisplay(r[c.fechaK])||"—")+'</td>'
+    +'<td>'+esc(tipo||"—")+'</td>'
+    +'<td class="num">'+esc(fmtMonto(r[c.montoK])||"—")+'</td>'
+    +'<td>'+esc(pagado||"—")+'</td>'
+    +cell(r[c.temaK])
+    +cell(r[c.comentK])
+    +'<td class="row-actions"><button class="icon-act" data-teredit="'+esc(String(id))+'" title="Editar">'+PENCIL_SVG+'</button><button class="icon-act danger" data-terdel="'+esc(String(id))+'" title="Eliminar">'+TRASH_SVG+'</button></td>'
+    +'</tr>';
+}
+function terRowEditHtml(r,c,id){
+  const m=/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(String(r[c.fechaK]||""));
+  const fdt=m?(m[1]+"-"+m[2]+"-"+m[3]+"T"+m[4]+":"+m[5]):"";
+  const tipoOpts=((lookups["ID_SESION"]&&lookups["ID_SESION"].options)||[]).map(o=>'<option value="'+esc(String(o.id))+'"'+(String(o.id)===String(r[c.sesK])?' selected':'')+'>'+esc(String(o.label??""))+'</option>').join("");
+  const pagadoVal=c.pagadoK&&!isUnpaidVal(r[c.pagadoK]);
+  const ti=(f,v)=>'<td><input class="edit-input ted" data-tf="'+f+'" type="text" value="'+esc(v==null?"":String(v))+'"></td>';
+  return '<tr class="row-editing">'
+    +'<td><input class="edit-input ted" data-tf="fecha" type="datetime-local" value="'+esc(fdt)+'"></td>'
+    +'<td><select class="edit-input ted" data-tf="tipo">'+tipoOpts+'</select></td>'
+    +ti("monto", r[c.montoK])
+    +'<td><select class="edit-input ted" data-tf="pagado"><option value="true"'+(pagadoVal?' selected':'')+'>Sí</option><option value="false"'+(!pagadoVal?' selected':'')+'>No</option></select></td>'
+    +ti("tema", r[c.temaK])
+    +ti("coment", r[c.comentK])
+    +'<td class="row-actions"><button class="icon-act ok" data-tersave="'+esc(String(id))+'" title="Guardar">'+CHECK_SVG+'</button><button class="icon-act" data-tercancel="1" title="Cancelar">'+X_SVG+'</button></td>'
+    +'</tr>';
+}
+function wireTerEdit(){
+  const w=$("#panel-terapias"); if(!w) return;
+  w.querySelectorAll("[data-teredit]").forEach(b=>b.addEventListener("click",()=>{ terEditId=b.dataset.teredit; renderTerapias(); }));
+  w.querySelectorAll("[data-tercancel]").forEach(b=>b.addEventListener("click",()=>{ terEditId=null; renderTerapias(); }));
+  w.querySelectorAll("[data-tersave]").forEach(b=>b.addEventListener("click",()=>saveTerRow(b.dataset.tersave)));
+  w.querySelectorAll("[data-terdel]").forEach(b=>b.addEventListener("click",()=>deleteTerRow(b.dataset.terdel)));
+}
+async function saveTerRow(id){
+  const c=terColsFrom(terapias[0]||{});
+  const row=terapias.find(r=>String(c.idK?r[c.idK]:"")===String(id));
+  if(!row){ toast("No se encontró la fila",true); return; }
+  const upd={};
+  document.querySelectorAll(".row-editing .ted").forEach(el=>{
+    const f=el.dataset.tf; let v=el.value;
+    if(f==="fecha"){ if(c.fechaK){ let dv=v?v.replace("T"," "):""; if(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(dv)) dv+=":00"; upd[c.fechaK]=dv||null; } }
+    else if(f==="monto"){ if(c.montoK){ upd[c.montoK]= v===""?null:(isNaN(Number(v))?v:Number(v)); } }
+    else if(f==="pagado"){ if(c.pagadoK){ upd[c.pagadoK]=(v==="true"); } }
+    else if(f==="tipo"){ if(c.sesK){ const o=((lookups["ID_SESION"]&&lookups["ID_SESION"].options)||[]).find(x=>String(x.id)===v); upd[c.sesK]= o?o.id:(v===""?null:v); } }
+    else if(f==="tema"){ if(c.temaK){ upd[c.temaK]= v===""?null:v; } }
+    else if(f==="coment"){ if(c.comentK){ upd[c.comentK]= v===""?null:v; } }
+  });
+  const { error }=await sb.from("Terapias").update(upd).eq(c.idK, id);
+  if(error){ toast("No se pudo guardar: "+error.message,true); return; }
+  Object.assign(row, upd);
+  const ar=allTerapias.find(r=>String(c.idK?r[c.idK]:"")===String(id)); if(ar) Object.assign(ar, upd);
+  terEditId=null; toast("Cambios guardados");
+  renderTerapias();
+}
+async function deleteTerRow(id){
+  if(!window.confirm("¿Eliminar esta sesión? Esta acción no se puede deshacer.")) return;
+  const c=terColsFrom(terapias[0]||{});
+  const { error }=await sb.from("Terapias").delete().eq(c.idK, id);
+  if(error){ toast("No se pudo eliminar: "+error.message,true); return; }
+  let idx=terapias.findIndex(r=>String(c.idK?r[c.idK]:"")===String(id)); if(idx>=0) terapias.splice(idx,1);
+  idx=allTerapias.findIndex(r=>String(c.idK?r[c.idK]:"")===String(id)); if(idx>=0) allTerapias.splice(idx,1);
+  if(String(terEditId)===String(id)) terEditId=null;
+  toast("Sesión eliminada");
+  renderTerapias();
 }
 function exportTerapias(){
   if(typeof XLSX==="undefined"){ toast("No se pudo cargar el exportador", true); return; }
-  const {cols,fechaK,sesK}=terapiaCols(terapias);
+  const c=terColsFrom(terapias[0]||{});
   const rows=currentTerapiaRows();
-  const data=rows.map(r=>{
-    const o={};
-    cols.forEach(c=>{
-      const header = c===sesK?"Tipo de Sesión":(isMontoCol(c)?"Monto":labelFor(c));
-      let val;
-      if(c===fechaK) val=fmtDateTime(r[c]) ?? r[c];
-      else if(c===sesK && lookups["ID_SESION"]) val=lookups["ID_SESION"].byId[r[c]] ?? r[c];
-      else if(isMontoCol(c)) val=(r[c]==null||r[c]==="")?null:Number(r[c]);
-      else if(typeof r[c]==="boolean") val=r[c]?"Sí":"No";
-      else val=r[c];
-      o[header]=val;
-    });
-    return o;
-  });
+  const data=rows.map(r=>({
+    "Fecha atención":fmtDateTime(r[c.fechaK])||r[c.fechaK],
+    "Tipo de Sesión":(c.sesK&&lookups["ID_SESION"])?(lookups["ID_SESION"].byId[r[c.sesK]]||""):"",
+    Monto:(r[c.montoK]==null||r[c.montoK]==="")?null:Number(r[c.montoK]),
+    Pagado:c.pagadoK?(isUnpaidVal(r[c.pagadoK])?"No":"Sí"):"",
+    "Tema Principal":c.temaK?(r[c.temaK]??""):"",
+    Comentarios:c.comentK?(r[c.comentK]??""):""
+  }));
   const ws=XLSX.utils.json_to_sheet(data);
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Terapias");
@@ -881,8 +939,8 @@ async function markPaid(id){
   toast("Sesión marcada como pagada");
   renderDashboard();
 }
-function terMasterCols(){
-  const k=Object.keys(allTerapias[0]||{});
+function terColsFrom(sample){
+  const k=Object.keys(sample||{});
   return {
     idK:k.find(c=>/^id$/i.test(c)),
     fechaK:k.find(c=>/atenc/i.test(c))||k.find(c=>/fecha/i.test(c)),
@@ -893,6 +951,7 @@ function terMasterCols(){
     comentK:k.find(c=>/coment/i.test(c)),
   };
 }
+function terMasterCols(){ return terColsFrom(allTerapias[0]||{}); }
 function rowViewHtml(r,c,id){
   const tipo=(c.sesK&&lookups["ID_SESION"])?(lookups["ID_SESION"].byId[r[c.sesK]]??""):"";
   const pagado = c.pagadoK ? (isUnpaidVal(r[c.pagadoK])?"No":"Sí") : "";
@@ -979,8 +1038,11 @@ function gcalSavedClientId(){ try{ const v=localStorage.getItem("gcalClientId");
 function dashCalendario(){
   const pad=n=>String(n).padStart(2,"0");
   const fmtD=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
-  const today=new Date(); const hasta=fmtD(today);
-  const d7=new Date(today); d7.setDate(d7.getDate()-7); const desde=fmtD(d7);
+  const today=new Date();
+  const day=today.getDay(); // 0=domingo … 6=sábado
+  const monday=new Date(today); monday.setDate(today.getDate()+(day===0?-6:1-day));
+  const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
+  const desde=fmtD(monday); const hasta=fmtD(sunday);
   const cid=gcalSavedClientId();
   let setup="";
   if(!cid){
