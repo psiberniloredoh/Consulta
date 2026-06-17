@@ -1034,6 +1034,29 @@ function lastMontoFor(rut){
   rows.sort((a,b)=>String(b[c.fechaK]||"").localeCompare(String(a[c.fechaK]||"")));
   return rows[0][c.montoK];
 }
+function tipoLabel(tipoId){
+  if(tipoId===""||tipoId==null) return "";
+  const b=lookups["ID_SESION"]&&lookups["ID_SESION"].byId;
+  return b ? (b[tipoId] ?? b[Number(tipoId)] ?? "") : "";
+}
+function isCoordTipo(tipoId){ return /coordinacion/.test(normTxt(tipoLabel(tipoId))); }
+function basePriceFor(rut){
+  const c=terMasterCols();
+  const rows=allTerapias.filter(r=>normRut(rOf(r))===normRut(rut) && r[c.montoK]!=null && r[c.montoK]!=="");
+  if(!rows.length) return "";
+  const isCoordRow=r=>/coordinacion/.test(normTxt(tipoLabel(r[c.sesK])));
+  const normal=rows.filter(r=>!isCoordRow(r));
+  const pool=normal.length?normal:rows;
+  pool.sort((a,b)=>String(b[c.fechaK]||"").localeCompare(String(a[c.fechaK]||"")));
+  return pool[0][c.montoK];
+}
+function priceForRow(rut, tipoId){
+  const base=basePriceFor(rut);
+  if(base===""||base==null) return "";
+  const n=Number(base);
+  if(isNaN(n)) return String(base);
+  return isCoordTipo(tipoId) ? String(Math.round(n/2)) : String(n);
+}
 function dtToStorage(iso){
   if(!iso) return null;
   const d=new Date(iso);
@@ -1085,7 +1108,7 @@ function buildImportReview(items){
     const tipoId=tipoIdFromText(text);
     const already=importedIds.has(ev.id);
     const rut=p?rutOf(p):"";
-    return { eventId:ev.id, startDT, allDay, title, rut, tipoId:tipoId!=null?String(tipoId):"", monto:p?String(lastMontoFor(rut)||""):"", already, include:!!p&&!already&&!allDay };
+    return { eventId:ev.id, startDT, allDay, title, rut, tipoId:tipoId!=null?String(tipoId):"", monto:p?priceForRow(rut, tipoId!=null?String(tipoId):""):"", already, include:!!p&&!already&&!allDay };
   });
   renderImportModal();
 }
@@ -1112,8 +1135,8 @@ function renderImportModal(){
   $("#importCount").textContent = total+(total===1?" cita encontrada":" citas encontradas");
   const w=$("#importBody");
   w.querySelectorAll("[data-imp-inc]").forEach(el=>el.addEventListener("change",()=>{ importRows[+el.dataset.impInc].include=el.checked; updateImportBtn(); }));
-  w.querySelectorAll("[data-imp-rut]").forEach(el=>el.addEventListener("change",()=>{ importRows[+el.dataset.impRut].rut=el.value; updateImportBtn(); }));
-  w.querySelectorAll("[data-imp-tipo]").forEach(el=>el.addEventListener("change",()=>{ importRows[+el.dataset.impTipo].tipoId=el.value; }));
+  w.querySelectorAll("[data-imp-rut]").forEach(el=>el.addEventListener("change",()=>{ const i=+el.dataset.impRut; importRows[i].rut=el.value; importRows[i].monto=priceForRow(el.value,importRows[i].tipoId); const mi=w.querySelector('[data-imp-monto="'+i+'"]'); if(mi) mi.value=importRows[i].monto; updateImportBtn(); }));
+  w.querySelectorAll("[data-imp-tipo]").forEach(el=>el.addEventListener("change",()=>{ const i=+el.dataset.impTipo; importRows[i].tipoId=el.value; importRows[i].monto=priceForRow(importRows[i].rut,el.value); const mi=w.querySelector('[data-imp-monto="'+i+'"]'); if(mi) mi.value=importRows[i].monto; }));
   w.querySelectorAll("[data-imp-monto]").forEach(el=>el.addEventListener("input",()=>{ importRows[+el.dataset.impMonto].monto=el.value; }));
   updateImportBtn();
   $("#importModal").classList.remove("hidden");
