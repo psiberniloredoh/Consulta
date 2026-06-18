@@ -208,6 +208,11 @@
   .ter-table.master.tpat th:nth-child(2),.ter-table.master.tpat td:nth-child(2){width:150px}
   .ter-table.master.tpat th:nth-child(5),.ter-table.master.tpat td:nth-child(5){width:150px}
   .ter-table.master.tpat th:nth-child(6),.ter-table.master.tpat td:nth-child(6){width:auto}
+  .ter-table.master.tcont th:nth-child(1),.ter-table.master.tcont td:nth-child(1){width:auto;white-space:normal}
+  .ter-table.master.tcont th:nth-child(2),.ter-table.master.tcont td:nth-child(2){width:150px}
+  .ter-table.master.tcont th:nth-child(3),.ter-table.master.tcont td:nth-child(3){width:150px}
+  .ter-table.master.tcont th:nth-child(4),.ter-table.master.tcont td:nth-child(4){width:auto}
+  .ter-table.master.tcont th:nth-child(5),.ter-table.master.tcont td:nth-child(5){width:76px}
   .ter-table.master .row-actions{padding-left:4px;padding-right:6px}
   .ter-table.master .edit-input{width:100%;min-width:0;box-sizing:border-box;padding:6px 7px;font-size:13px}
   .ter-table.master input[type=datetime-local]{min-width:0;font-size:12px;padding:6px 4px}
@@ -291,9 +296,11 @@
       </div>
       <div class="tabs">
         <button class="tab active" data-tab="principal">Información principal</button>
+        <button class="tab" data-tab="contactos">Contactos</button>
         <button class="tab" data-tab="terapias">Terapias</button>
       </div>
       <div id="panel-principal"><div class="ficha-grid" id="fichaGrid"></div></div>
+      <div id="panel-contactos" class="hidden"></div>
       <div id="panel-terapias" class="hidden"></div>
     </div>
 
@@ -369,6 +376,7 @@ const SUPABASE_ANON_KEY = "sb_publishable__TIV3SJKsnymPXs85fzKMQ_qUBu6hsE";
 const TABLE_PACIENTES   = "Pacientes";
 const TABLE_PERFILES    = "PERFILES";
 const TABLE_PRECIOS     = "Precios";
+const TABLE_CONTACTOS   = "Contacto_Paciente";
 const PRACTICE_NAME     = "Portal clínico";
 // Enlace de inserción de Google Calendar. Por defecto, el calendario principal.
 // Para usar otro: Google Calendar → Configuración → (tu calendario) → "Integrar calendario" → copia el src del código <iframe>.
@@ -403,6 +411,7 @@ else $("#setupNotice").classList.remove("hidden");
 
 let user = null, patients = [], lookups = {}, currentPatient = null, editing = false, isPsico = false;
 let terapias = [], terapiasPeriodo = "", terEditId = null;
+let contactos = [], contactEditId = null;
 let allTerapias = [], dashSection = "periodo", dashTodasQuery = "", patientsByNorm = {}, monthModalRut = "", monthModalChannel = "wa";
 let googleToken = "", tokenClient = null, importRows = [], calPendingAction = null, remList = [], preciosByRut = {};
 const WA_SVG='<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 18.15h-.01c-1.52 0-3.01-.41-4.3-1.18l-.31-.18-3.19.84.85-3.11-.2-.32a8.2 8.2 0 0 1-1.26-4.39c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.82 2.42a8.16 8.16 0 0 1 2.41 5.82c0 4.54-3.7 8.23-8.25 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.16-.25.25-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.11-.22-.17-.47-.29z"/></svg>';
@@ -578,6 +587,7 @@ function selectPatient(p){
   showState("patient");
   $("#panel-terapias").innerHTML='<div class="state-empty" style="margin-top:4vh"><div class="spinner"></div>Cargando terapias…</div>';
   loadTerapias(p);
+  loadContactos(p);
 }
 function displayValue(c, raw){
   if(lookups[c]){ const name=lookups[c].byId[raw]; return fmt(name ?? raw); }
@@ -650,12 +660,123 @@ $("#saveBtn").addEventListener("click", async ()=>{
 function setTab(tab){
   document.querySelectorAll(".tab[data-tab]").forEach(t=>t.classList.toggle("active", t.dataset.tab===tab));
   $("#panel-principal").classList.toggle("hidden", tab!=="principal");
+  $("#panel-contactos").classList.toggle("hidden", tab!=="contactos");
   $("#panel-terapias").classList.toggle("hidden", tab!=="terapias");
   if(editing){ editing=false; renderFicha(); }
   $("#editActions").classList.add("hidden");
   $("#editBtn").classList.toggle("hidden", !(tab==="principal" && isPsico));
 }
 document.querySelectorAll(".tab[data-tab]").forEach(t=>t.addEventListener("click",()=>setTab(t.dataset.tab)));
+function contactCols(){
+  const s=contactos.find(c=>!c.__tmp) || {};
+  const k=Object.keys(s);
+  const find=(re,def)=>k.find(c=>re.test(c))||def;
+  return {
+    idK:find(/^id$/i,"id"),
+    rutK:find(/^rut$/i,"RUT"),
+    nombreK:find(/nombre/i,"Nombre"),
+    relK:find(/relac/i,"Relación"),
+    telK:find(/tel|fono|celular/i,"Telefono"),
+    emailK:find(/email|correo|mail/i,"email"),
+  };
+}
+async function loadContactos(p){
+  contactos=[]; contactEditId=null;
+  try{
+    const { data }=await sb.from(TABLE_CONTACTOS).select("*").in("RUT", rutVariants(rutOf(p)));
+    contactos=data||[];
+  }catch(e){ contactos=[]; }
+  if($("#panel-contactos")) renderContactos();
+}
+function cancelTmpContact(){ const i=contactos.findIndex(c=>c.__tmp); if(i>=0) contactos.splice(i,1); }
+function renderContactos(){
+  const panel=$("#panel-contactos"); if(!panel) return;
+  const c=contactCols(); const canEdit=isPsico;
+  const addBtn = canEdit? '<button class="btn-primary inline" id="contactAdd">+ Agregar contacto</button>':'';
+  if(!contactos.length){
+    panel.innerHTML='<div class="ter-bar"><span class="ter-count">Sin contactos</span>'+addBtn+'</div><div class="state-empty" style="margin-top:2vh"><div class="big">Aún no hay contactos</div><p>Agrega el contacto de un familiar o apoderado (mamá, papá, etc.).</p></div>';
+    wireContactos(); return;
+  }
+  const thead='<tr><th>Nombre</th><th>Relación</th><th>Teléfono</th><th>Email</th>'+(canEdit?'<th></th>':'')+'</tr>';
+  const body=contactos.map((r,i)=>{
+    const editing = r.__tmp || (c.idK && r[c.idK]!=null && String(r[c.idK])===String(contactEditId));
+    return editing ? contactRowEditHtml(r,c,i) : contactRowViewHtml(r,c,canEdit);
+  }).join("");
+  panel.innerHTML='<div class="ter-bar"><span class="ter-count">'+contactos.length+' '+(contactos.length===1?"contacto":"contactos")+'</span>'+addBtn+'</div>'
+    +'<div class="table-card"><div class="table-scroll"><table class="ter-table master tcont"><thead>'+thead+'</thead><tbody>'+body+'</tbody></table></div></div>';
+  wireContactos();
+}
+function contactRowViewHtml(r,c,canEdit){
+  const cell=v=>(v===null||v===undefined||v==="")?'<td class="cell-faint">—</td>':'<td>'+esc(v)+'</td>';
+  const id=c.idK?r[c.idK]:null;
+  const acts = canEdit ? '<td class="row-actions"><button class="icon-act" data-cedit="'+esc(String(id))+'" title="Editar">'+PENCIL_SVG+'</button><button class="icon-act danger" data-cdel="'+esc(String(id))+'" title="Eliminar">'+TRASH_SVG+'</button></td>' : '';
+  return '<tr>'+cell(r[c.nombreK])+cell(r[c.relK])+cell(r[c.telK])+cell(r[c.emailK])+acts+'</tr>';
+}
+function contactRowEditHtml(r,c,i){
+  const ti=(f,v,ph)=>'<td><input class="edit-input ced" data-cf="'+f+'" type="text" value="'+esc(v==null?"":String(v))+'"'+(ph?' placeholder="'+esc(ph)+'"':'')+'></td>';
+  const isNew=!!r.__tmp;
+  const saveAttr = isNew? 'data-csavenew="'+i+'"' : 'data-csave="'+esc(String(r[c.idK]))+'"';
+  return '<tr class="row-editing">'
+    +ti("nombre", r[c.nombreK], "Ej: María Pérez")
+    +ti("rel", r[c.relK], "Ej: Madre")
+    +ti("tel", r[c.telK], "56912345678")
+    +ti("email", r[c.emailK], "correo@ejemplo.cl")
+    +'<td class="row-actions"><button class="icon-act ok" '+saveAttr+' title="Guardar">'+CHECK_SVG+'</button><button class="icon-act" data-ccancel="'+i+'" title="Cancelar">'+X_SVG+'</button></td>'
+    +'</tr>';
+}
+function wireContactos(){
+  const w=$("#panel-contactos"); if(!w) return;
+  const a=$("#contactAdd"); if(a) a.addEventListener("click", addContacto);
+  w.querySelectorAll("[data-cedit]").forEach(b=>b.addEventListener("click",()=>{ cancelTmpContact(); contactEditId=b.dataset.cedit; renderContactos(); }));
+  w.querySelectorAll("[data-cdel]").forEach(b=>b.addEventListener("click",()=>deleteContacto(b.dataset.cdel)));
+  w.querySelectorAll("[data-csave]").forEach(b=>b.addEventListener("click",()=>saveContacto(b.dataset.csave)));
+  w.querySelectorAll("[data-csavenew]").forEach(b=>b.addEventListener("click",()=>saveNewContacto(+b.dataset.csavenew)));
+  w.querySelectorAll("[data-ccancel]").forEach(b=>b.addEventListener("click",()=>{ const i=+b.dataset.ccancel; if(contactos[i]&&contactos[i].__tmp) contactos.splice(i,1); contactEditId=null; renderContactos(); }));
+}
+function addContacto(){
+  cancelTmpContact();
+  const c=contactCols();
+  const tmp={ __tmp:true };
+  tmp[c.rutK]=rutOf(currentPatient); tmp[c.nombreK]=""; tmp[c.relK]=""; tmp[c.telK]=""; tmp[c.emailK]="";
+  contactos.unshift(tmp); contactEditId=null; renderContactos();
+}
+function collectContact(c){
+  const o={};
+  document.querySelectorAll(".row-editing .ced").forEach(el=>{
+    const f=el.dataset.cf; const v=el.value.trim();
+    if(f==="nombre") o[c.nombreK]= v||null;
+    else if(f==="rel") o[c.relK]= v||null;
+    else if(f==="tel"){ const d=v.replace(/\D/g,""); o[c.telK]= d===""?null:Number(d); }
+    else if(f==="email") o[c.emailK]= v||null;
+  });
+  return o;
+}
+async function saveNewContacto(i){
+  const c=contactCols();
+  const obj=collectContact(c); obj[c.rutK]=rutOf(currentPatient);
+  if(!obj[c.nombreK]){ toast("El nombre es obligatorio",true); return; }
+  const { data, error }=await sb.from(TABLE_CONTACTOS).insert(obj).select();
+  if(error){ toast("No se pudo guardar: "+error.message,true); return; }
+  const idx=contactos.findIndex(x=>x.__tmp);
+  if(idx>=0){ if(data&&data[0]) contactos[idx]=data[0]; else contactos.splice(idx,1); }
+  contactEditId=null; toast("Contacto agregado"); renderContactos();
+}
+async function saveContacto(id){
+  const c=contactCols();
+  const obj=collectContact(c);
+  const { error }=await sb.from(TABLE_CONTACTOS).update(obj).eq(c.idK, id);
+  if(error){ toast("No se pudo guardar: "+error.message,true); return; }
+  const row=contactos.find(x=>String(x[c.idK])===String(id)); if(row) Object.assign(row, obj);
+  contactEditId=null; toast("Contacto actualizado"); renderContactos();
+}
+async function deleteContacto(id){
+  if(!window.confirm("¿Eliminar este contacto?")) return;
+  const c=contactCols();
+  const { error }=await sb.from(TABLE_CONTACTOS).delete().eq(c.idK, id);
+  if(error){ toast("No se pudo eliminar: "+error.message,true); return; }
+  const idx=contactos.findIndex(x=>String(x[c.idK])===String(id)); if(idx>=0) contactos.splice(idx,1);
+  toast("Contacto eliminado"); renderContactos();
+}
 
 /* terapias */
 async function loadTerapias(p){
