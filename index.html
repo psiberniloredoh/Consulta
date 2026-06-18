@@ -129,6 +129,10 @@
   .dpill{border:1px solid var(--line-strong);background:var(--card);color:var(--ink-soft);padding:8px 15px;border-radius:999px;font-size:13.5px;font-weight:500;transition:all .15s}
   .dpill:hover{border-color:var(--ink-faint);color:var(--ink)}
   .dpill.active{background:var(--accent-deep);border-color:var(--accent-deep);color:#fff}
+  .pill-action{border:1px solid var(--line-strong);background:var(--card);color:var(--ink-soft);padding:8px 15px;border-radius:999px;font-size:13.5px;font-weight:500;cursor:pointer;transition:all .15s}
+  .pill-action:hover{border-color:var(--ink-faint);color:var(--ink)}
+  .pill-action.primary{background:var(--accent-deep);border-color:var(--accent-deep);color:#fff}
+  .pill-action.primary:hover{color:#fff;opacity:.92}
   .dash-bar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
   .dash-bar .ter-count{margin-left:auto}
   .dash-group{margin-bottom:12px}
@@ -156,6 +160,13 @@
   .imp-table th,.imp-table td{padding:9px 10px}
   .imp-table .edit-input{width:100%;min-width:0;box-sizing:border-box;padding:6px 7px;font-size:13px}
   .imp-table tr.imp-done td{opacity:.5}
+  .ter-table.master.imp-table th:nth-child(1),.ter-table.master.imp-table td:nth-child(1){width:40px}
+  .ter-table.master.imp-table th:nth-child(2),.ter-table.master.imp-table td:nth-child(2){width:138px;white-space:nowrap}
+  .ter-table.master.imp-table th:nth-child(3),.ter-table.master.imp-table td:nth-child(3){width:auto}
+  .ter-table.master.imp-table th:nth-child(4),.ter-table.master.imp-table td:nth-child(4){width:220px}
+  .ter-table.master.imp-table th:nth-child(5),.ter-table.master.imp-table td:nth-child(5){width:140px}
+  .ter-table.master.imp-table th:nth-child(6),.ter-table.master.imp-table td:nth-child(6){width:104px}
+  .ter-table.master.imp-table th:nth-child(7),.ter-table.master.imp-table td:nth-child(7){width:84px}
   .imp-badge{display:inline-block;font-size:11px;font-weight:600;color:var(--accent-deep);background:var(--accent-wash);padding:3px 8px;border-radius:999px;white-space:nowrap}
   .cal-import{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;margin-bottom:16px}
   .cal-import h3{margin:0 0 4px;font-size:16px}
@@ -324,6 +335,30 @@
   </div>
 </div>
 
+<div class="modal-scrim hidden" id="patientModal">
+  <div class="modal-card wide">
+    <h3>Crear paciente</h3>
+    <p class="mm-sub">Completa los datos. El RUT y el nombre son obligatorios; el resto es opcional.</p>
+    <div id="patientForm" class="import-body" style="padding:16px"></div>
+    <div class="mm-actions">
+      <button class="btn-ghost" id="patientCancel">Cancelar</button>
+      <button class="btn-primary inline" id="patientSave">Crear paciente</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-scrim hidden" id="preciosModal">
+  <div class="modal-card wide">
+    <h3>Precios por paciente</h3>
+    <p class="mm-sub">Edita el precio base de cada paciente. La coordinación escolar se cobra a la mitad automáticamente.</p>
+    <div id="preciosBody" class="import-body"></div>
+    <div class="mm-actions">
+      <button class="btn-ghost" id="preciosCancel">Cerrar</button>
+      <button class="btn-primary inline" id="preciosSave">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -332,6 +367,7 @@ const SUPABASE_URL      = "https://lyhrfpqxsoorakscpszf.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable__TIV3SJKsnymPXs85fzKMQ_qUBu6hsE";
 const TABLE_PACIENTES   = "Pacientes";
 const TABLE_PERFILES    = "PERFILES";
+const TABLE_PRECIOS     = "Precios";
 const PRACTICE_NAME     = "Portal clínico";
 // Enlace de inserción de Google Calendar. Por defecto, el calendario principal.
 // Para usar otro: Google Calendar → Configuración → (tu calendario) → "Integrar calendario" → copia el src del código <iframe>.
@@ -367,7 +403,7 @@ else $("#setupNotice").classList.remove("hidden");
 let user = null, patients = [], lookups = {}, currentPatient = null, editing = false, isPsico = false;
 let terapias = [], terapiasPeriodo = "", terEditId = null;
 let allTerapias = [], dashSection = "periodo", dashTodasQuery = "", patientsByNorm = {}, monthModalRut = "", monthModalChannel = "wa";
-let googleToken = "", tokenClient = null, importRows = [], calPendingAction = null, remList = [];
+let googleToken = "", tokenClient = null, importRows = [], calPendingAction = null, remList = [], preciosByRut = {};
 const WA_SVG='<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 18.15h-.01c-1.52 0-3.01-.41-4.3-1.18l-.31-.18-3.19.84.85-3.11-.2-.32a8.2 8.2 0 0 1-1.26-4.39c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.82 2.42a8.16 8.16 0 0 1 2.41 5.82c0 4.54-3.7 8.23-8.25 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.16-.25.25-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.11-.22-.17-.47-.29z"/></svg>';
 const MAIL_SVG='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
 const PENCIL_SVG='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
@@ -460,6 +496,17 @@ function showState(which){
   $("#dashboard").classList.toggle("hidden", which!=="dashboard");
 }
 
+function preciosCols(sample){ const k=Object.keys(sample||{}); return { rutK:k.find(c=>/^rut$/i.test(c))||"RUT", precioK:k.find(c=>/precio|monto|valor/i.test(c))||"PRECIO" }; }
+async function loadPrecios(){
+  preciosByRut={};
+  try{
+    const { data }=await sb.from(TABLE_PRECIOS).select("*");
+    if(data&&data.length){
+      const c=preciosCols(data[0]);
+      data.forEach(r=>{ const v=r[c.precioK]; if(v!=null&&v!=="") preciosByRut[normRut(r[c.rutK])]=v; });
+    }
+  }catch(e){ /* la tabla Precios aún no existe */ }
+}
 async function loadLookups(){
   lookups={};
   for(const cfg of LOOKUP_DEFS){
@@ -486,6 +533,7 @@ async function loadData(){
   let rol=null;
   try{ const { data }=await sb.from(TABLE_PERFILES).select("ROL").eq("id",user.id).maybeSingle(); if(data)rol=data.ROL; }catch(e){}
   await loadLookups();
+  await loadPrecios();
   const { data, error }=await sb.from(TABLE_PACIENTES).select("*");
   if(error){ showState("empty"); $("#emptyState").innerHTML='<div class="big">No se pudieron cargar las fichas</div><p>Revisa las políticas RLS de '+TABLE_PACIENTES+'.</p>'; return; }
   patients=data||[];
@@ -785,6 +833,8 @@ function renderDashboard(){
     +'<button class="dpill'+(dashSection==="impagas"?" active":"")+'" data-sec="impagas">No pagadas</button>'
     +'<button class="dpill'+(dashSection==="todas"?" active":"")+'" data-sec="todas">Todas las sesiones</button>'
     +'<button class="dpill'+(dashSection==="calendario"?" active":"")+'" data-sec="calendario">Calendario</button>'
+    +'<button class="pill-action primary" id="btnNewPatient" style="margin-left:auto">+ Crear paciente</button>'
+    +'<button class="pill-action" id="btnPrecios">Precios de pacientes</button>'
     +'</div>';
   let body;
   if(dashSection==="calendario") body=dashCalendario();
@@ -794,6 +844,7 @@ function renderDashboard(){
   else body=dashPeriodo();
   el.innerHTML='<div class="dash-head"><div class="eyebrow">Panel</div><h2>Resumen general</h2></div>'+pills+'<div>'+body+'</div>';
   el.querySelectorAll(".dpill").forEach(b=>b.addEventListener("click",()=>{ dashSection=b.dataset.sec; dashEditId=null; renderDashboard(); }));
+  { const np=$("#btnNewPatient"); if(np) np.addEventListener("click", openPatientModal); const pp=$("#btnPrecios"); if(pp) pp.addEventListener("click", openPreciosModal); }
   el.querySelectorAll("[data-export]").forEach(b=>b.addEventListener("click",()=>exportDash(b.dataset.export)));
   const s=$("#dashSearch"); if(s) s.addEventListener("input",()=>{ dashTodasQuery=s.value; const w=$("#dashTodasWrap"); if(w){ w.innerHTML=dashTodasTableHtml(); wireTodas(); } });
   el.querySelectorAll("[data-toggle]").forEach(b=>b.addEventListener("click",()=>{ const g=b.closest(".dash-group"); const body=g&&g.querySelector(".dash-group-body"); if(body){ body.classList.toggle("hidden"); b.classList.toggle("open"); } }));
@@ -1121,6 +1172,8 @@ function tipoLabel(tipoId){
 }
 function isCoordTipo(tipoId){ return /coordinacion/.test(normTxt(tipoLabel(tipoId))); }
 function basePriceFor(rut){
+  const pv=preciosByRut[normRut(rut)];
+  if(pv!=null && pv!=="") return pv;
   const c=terMasterCols();
   const rows=allTerapias.filter(r=>normRut(rOf(r))===normRut(rut) && r[c.montoK]!=null && r[c.montoK]!=="");
   if(!rows.length) return "";
@@ -1234,6 +1287,84 @@ function sendReminderMail(i){
   if(!email){ toast("Este paciente no tiene correo",true); return; }
   openMailto(email, "Recordatorio de tu sesión", reminderMsg(displayName(row.patient),row.startDT));
 }
+function openPatientModal(){
+  const sample=patients[0]||{};
+  const cols=Object.keys(sample);
+  if(!cols.length){ toast("No se pudieron leer las columnas de Pacientes",true); return; }
+  const rutc=cols.find(c=>/^rut$/i.test(c)); const nom=cols.find(c=>/nombre/i.test(c));
+  const ordered=[...new Set([rutc,nom,...cols].filter(Boolean))];
+  const fields=ordered.map(c=>{
+    const lbl=esc(labelFor(c));
+    let ctrl;
+    if(lookups[c]){
+      const opts=lookups[c].options.map(o=>'<option value="'+esc(String(o.id))+'">'+esc(String(o.label??""))+'</option>').join("");
+      ctrl='<select class="edit-input pf" data-col="'+esc(c)+'" data-fk="1"><option value="">—</option>'+opts+'</select>';
+    } else if(typeof sample[c]==="boolean"){
+      ctrl='<select class="edit-input pf" data-col="'+esc(c)+'" data-bool="1"><option value="">—</option><option value="true">Sí</option><option value="false">No</option></select>';
+    } else if(/fecha|nacim/i.test(c)){
+      ctrl='<input class="edit-input pf" data-col="'+esc(c)+'" type="date">';
+    } else {
+      ctrl='<input class="edit-input pf" data-col="'+esc(c)+'" type="text">';
+    }
+    return '<div class="ficha-item"><div class="fk">'+lbl+'</div>'+ctrl+'</div>';
+  }).join("");
+  const precioField='<div class="ficha-item"><div class="fk">Precio por sesión</div><input class="edit-input" id="pfPrecio" type="text" placeholder="Ej: 40000"></div>';
+  $("#patientForm").innerHTML='<div class="ficha-grid">'+fields+precioField+'</div>';
+  $("#patientModal").classList.remove("hidden");
+}
+async function savePatient(){
+  const obj={};
+  document.querySelectorAll("#patientForm .pf").forEach(el=>{
+    const col=el.dataset.col; let v=el.value;
+    if(el.dataset.fk){ if(v===""){ v=null; } else { const o=lookups[col].options.find(x=>String(x.id)===v); v=o?o.id:v; } }
+    else if(el.dataset.bool){ v = v===""?null:(v==="true"); }
+    else { v = v===""?null:v; }
+    obj[col]=v;
+  });
+  const rutKey=Object.keys(obj).find(c=>/^rut$/i.test(c));
+  const rut=String(obj[rutKey]||"").trim();
+  const nomKey=Object.keys(obj).find(c=>/nombre/i.test(c));
+  if(!rut){ toast("El RUT es obligatorio",true); return; }
+  if(nomKey && !obj[nomKey]){ toast("El nombre es obligatorio",true); return; }
+  const precioVal=$("#pfPrecio")?$("#pfPrecio").value.trim():"";
+  const btn=$("#patientSave"); if(btn){ btn.disabled=true; btn.textContent="Creando…"; }
+  const { data, error }=await sb.from(TABLE_PACIENTES).insert(obj).select();
+  if(error){ toast("No se pudo crear: "+error.message,true); if(btn){ btn.disabled=false; btn.textContent="Crear paciente"; } return; }
+  const np=(data&&data[0])?data[0]:obj;
+  patients.push(np); buildPatientIndex();
+  if(precioVal!==""){
+    const num=isNaN(Number(precioVal))?precioVal:Number(precioVal);
+    const { error:e2 }=await sb.from(TABLE_PRECIOS).upsert({ RUT:rut, PRECIO:num }, { onConflict:"RUT" });
+    if(e2){ toast("Paciente creado, pero el precio no se guardó: "+e2.message,true); }
+    else preciosByRut[normRut(rut)]=num;
+  }
+  if(btn){ btn.disabled=false; btn.textContent="Crear paciente"; }
+  $("#patientModal").classList.add("hidden");
+  toast("Paciente creado");
+}
+function openPreciosModal(){
+  const list=patients.slice().sort((a,b)=>displayName(a).localeCompare(displayName(b),"es",{sensitivity:"base"}));
+  const body=list.map(p=>{
+    const rut=rutOf(p); const cur=preciosByRut[normRut(rut)];
+    const val=(cur!=null&&cur!=="")?String(cur):"";
+    return '<tr><td>'+esc(displayName(p))+'</td><td style="white-space:nowrap;color:var(--ink-faint)">'+esc(String(rut))+'</td><td><input class="edit-input pp" data-rut="'+esc(String(rut))+'" data-orig="'+esc(val)+'" type="text" value="'+esc(val)+'" style="max-width:140px"></td></tr>';
+  }).join("");
+  $("#preciosBody").innerHTML='<table class="ter-table"><thead><tr><th>Paciente</th><th>RUT</th><th>Precio por sesión</th></tr></thead><tbody>'+body+'</tbody></table>';
+  $("#preciosModal").classList.remove("hidden");
+}
+async function savePrecios(){
+  const changes=[];
+  document.querySelectorAll("#preciosBody .pp").forEach(el=>{ const v=el.value.trim(); const orig=el.dataset.orig||""; if(v!==orig) changes.push({ rut:el.dataset.rut, val:v }); });
+  if(!changes.length){ $("#preciosModal").classList.add("hidden"); toast("No hubo cambios"); return; }
+  const payload=changes.map(c=>({ RUT:c.rut, PRECIO: c.val===""?null:(isNaN(Number(c.val))?c.val:Number(c.val)) }));
+  const btn=$("#preciosSave"); if(btn){ btn.disabled=true; btn.textContent="Guardando…"; }
+  const { error }=await sb.from(TABLE_PRECIOS).upsert(payload, { onConflict:"RUT" });
+  if(btn){ btn.disabled=false; btn.textContent="Guardar cambios"; }
+  if(error){ toast("No se pudo guardar: "+error.message,true); return; }
+  changes.forEach(c=>{ const num = c.val===""?undefined:(isNaN(Number(c.val))?c.val:Number(c.val)); if(num===undefined) delete preciosByRut[normRut(c.rut)]; else preciosByRut[normRut(c.rut)]=num; });
+  $("#preciosModal").classList.add("hidden");
+  toast(changes.length+(changes.length===1?" precio actualizado":" precios actualizados"));
+}
 function buildImportReview(items){
   const importedIds=new Set(allTerapias.map(r=>r.ID_EVENTO).filter(Boolean));
   importRows=items.filter(ev=>ev.status!=="cancelled").map(ev=>{
@@ -1339,6 +1470,10 @@ $("#importModal").addEventListener("click",e=>{ if(e.target===$("#importModal"))
 $("#importConfirm").addEventListener("click",confirmImport);
 $("#reminderClose").addEventListener("click",()=>$("#reminderModal").classList.add("hidden"));
 $("#reminderModal").addEventListener("click",e=>{ if(e.target===$("#reminderModal")) $("#reminderModal").classList.add("hidden"); });
+$("#patientCancel").addEventListener("click",()=>$("#patientModal").classList.add("hidden"));
+$("#patientSave").addEventListener("click",savePatient);
+$("#preciosCancel").addEventListener("click",()=>$("#preciosModal").classList.add("hidden"));
+$("#preciosSave").addEventListener("click",savePrecios);
 
 /* sesión persistente */
 (async ()=>{ if(!sb)return; const { data:{ session } }=await sb.auth.getSession(); if(session)await enterApp(); })();
