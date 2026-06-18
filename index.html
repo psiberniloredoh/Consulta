@@ -135,6 +135,19 @@
   .pill-action:hover{border-color:var(--ink-faint);color:var(--ink)}
   .pill-action.primary{background:var(--accent-deep);border-color:var(--accent-deep);color:#fff}
   .pill-action.primary:hover{color:#fff;opacity:.92}
+  .imp-tabs{display:flex;gap:8px;margin-bottom:14px}
+  .imp-tab{border:1px solid var(--line-strong);background:var(--card);color:var(--ink-soft);padding:7px 16px;border-radius:999px;font-size:13.5px;font-weight:500;cursor:pointer;transition:all .15s}
+  .imp-tab:hover{border-color:var(--ink-faint);color:var(--ink)}
+  .imp-tab.active{background:var(--accent-deep);border-color:var(--accent-deep);color:#fff}
+  .imp-pills{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 4px}
+  .imp-pill{display:flex;flex-direction:column;align-items:flex-start;gap:1px;border:1px solid var(--line-strong);background:var(--card);border-radius:14px;padding:10px 15px;cursor:pointer;transition:all .15s;min-width:150px}
+  .imp-pill:hover{border-color:var(--ink-faint)}
+  .imp-pill.active{background:var(--accent-deep);border-color:var(--accent-deep)}
+  .imp-pill .ip-month{font-weight:600;font-size:14.5px;color:var(--ink)}
+  .imp-pill .ip-meta{font-size:12px;color:var(--ink-soft)}
+  .imp-pill .ip-amount{font-size:14px;font-weight:600;color:var(--danger);margin-top:2px}
+  .imp-pill.active .ip-month,.imp-pill.active .ip-meta,.imp-pill.active .ip-amount{color:#fff}
+  .imp-sub{font-size:12.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-deep);margin:18px 0 10px}
   .edit-input::placeholder{color:var(--ink-faint);opacity:1}
   .dash-bar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
   .dash-bar .ter-count{margin-left:auto}
@@ -418,7 +431,7 @@ else $("#setupNotice").classList.remove("hidden");
 let user = null, patients = [], lookups = {}, currentPatient = null, editing = false, isPsico = false;
 let terapias = [], terapiasPeriodo = "", terEditId = null;
 let contactos = [], contactEditId = null;
-let allTerapias = [], dashSection = "periodo", dashTodasQuery = "", patientsByNorm = {}, monthModalRut = "", monthModalChannel = "wa", dashImpagaPeriodo = "";
+let allTerapias = [], dashSection = "periodo", dashTodasQuery = "", patientsByNorm = {}, monthModalRut = "", monthModalChannel = "wa", dashImpagaPeriodo = "", dashImpagaVista = "paciente";
 let googleToken = "", tokenClient = null, importRows = [], calPendingAction = null, remList = [], preciosByRut = {};
 const WA_SVG='<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 18.15h-.01c-1.52 0-3.01-.41-4.3-1.18l-.31-.18-3.19.84.85-3.11-.2-.32a8.2 8.2 0 0 1-1.26-4.39c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.82 2.42a8.16 8.16 0 0 1 2.41 5.82c0 4.54-3.7 8.23-8.25 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.16-.25.25-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.11-.22-.17-.47-.29z"/></svg>';
 const MAIL_SVG='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
@@ -981,6 +994,10 @@ function renderDashboard(){
   el.querySelectorAll("[data-mes]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); openMonthModal(b.dataset.mes,"wa"); }));
   el.querySelectorAll("[data-mailmes]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); openMonthModal(b.dataset.mailmes,"email"); }));
   el.querySelectorAll("[data-pay]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); markPaid(b.dataset.pay); }));
+  el.querySelectorAll("[data-imp-vista]").forEach(b=>b.addEventListener("click",()=>{ dashImpagaVista=b.dataset.impVista; renderDashboard(); }));
+  el.querySelectorAll("[data-imp-period]").forEach(b=>b.addEventListener("click",()=>{ dashImpagaPeriodo=b.dataset.impPeriod; renderDashboard(); }));
+  el.querySelectorAll("[data-impwa]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); buildMonthlyWhatsApp(b.dataset.impwa, dashImpagaPeriodo); }));
+  el.querySelectorAll("[data-impmail]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); emailMensual(b.dataset.impmail, dashImpagaPeriodo); }));
   if(dashSection==="todas") wireTodas();
   if(dashSection==="calendario") wireCalendario();
   if(dashSection==="periodo") renderPeriodoChart();
@@ -1035,6 +1052,42 @@ function renderPeriodoChart(){
   });
 }
 function dashImpagas(){
+  const {pagadoK}=terKeys();
+  const unpaid=allTerapias.filter(r=>pagadoK && isUnpaidVal(r[pagadoK]));
+  if(!unpaid.length) return '<div class="state-empty" style="margin-top:2vh"><div class="big">Todo al día</div><p>No hay sesiones pendientes de pago.</p></div>';
+  if(dashImpagaVista!=="mes" && dashImpagaVista!=="paciente") dashImpagaVista="paciente";
+  const tabs='<div class="imp-tabs">'
+    +'<button class="imp-tab'+(dashImpagaVista==="paciente"?" active":"")+'" data-imp-vista="paciente">Por paciente</button>'
+    +'<button class="imp-tab'+(dashImpagaVista==="mes"?" active":"")+'" data-imp-vista="mes">Por mes</button>'
+    +'</div>';
+  return tabs + (dashImpagaVista==="mes" ? dashImpagasPorMes() : dashImpagasPorPaciente());
+}
+function dashImpagasPorPaciente(){
+  const {fechaK,sesK,pagadoK,montoK}=terKeys();
+  const idK=Object.keys(allTerapias[0]||{}).find(c=>/^id$/i.test(c));
+  const unpaid=allTerapias.filter(r=>pagadoK && isUnpaidVal(r[pagadoK]));
+  const groups={};
+  unpaid.forEach(r=>{ const k=normRut(rOf(r)); if(!groups[k])groups[k]={name:nameForRut(rOf(r)),rows:[],sum:0}; groups[k].rows.push(r); groups[k].sum+=Number(r[montoK])||0; });
+  const entries=Object.entries(groups).sort((a,b)=>String(a[1].name).localeCompare(String(b[1].name),"es",{sensitivity:"base"}));
+  const totalSum=entries.reduce((a,e)=>a+e[1].sum,0);
+  let html='<div class="dash-bar"><span class="ter-count">'+unpaid.length+' sesiones impagas · '+esc(fmtMonto(totalSum)||"$0")+' adeudado</span><button class="btn-primary inline" data-export="impagas">Descargar Excel</button></div>';
+  entries.forEach(([key,g])=>{
+    g.rows.sort((a,b)=>String(b[fechaK]||"").localeCompare(String(a[fechaK]||"")));
+    const items=g.rows.map(r=>'<tr><td>'+esc(fmtDateTime(r[fechaK])||"—")+'</td><td>'+esc(tipoSesion(r,sesK)||"—")+'</td><td class="num">'+esc(fmtMonto(r[montoK])||"—")+'</td><td class="num"><button class="btn-pay" data-pay="'+esc(String(idK?r[idK]:""))+'">Marcar pagada</button></td></tr>').join("");
+    html+='<div class="dash-group">'
+      +'<div class="dash-group-head">'
+        +'<button class="dgh-main" data-toggle><span class="chev">▸</span><span class="dgname">'+esc(g.name)+'</span></button>'
+        +'<div class="dgh-right"><span class="dgsum">'+g.rows.length+' sesiones · '+esc(fmtMonto(g.sum)||"$0")+'</span>'
+        +'<div class="action-group"><div class="ag-title">Pendientes</div><div class="ag-buttons"><button class="btn-icon wa" data-wa="'+esc(key)+'" title="Enviar por WhatsApp">'+WA_SVG+'</button><button class="btn-icon" data-mail="'+esc(key)+'" title="Enviar por correo">'+MAIL_SVG+'</button></div></div>'
+        +'<div class="action-group"><div class="ag-title">Mensual</div><div class="ag-buttons"><button class="btn-icon wa" data-mes="'+esc(key)+'" title="WhatsApp mensual">'+WA_SVG+'</button><button class="btn-icon" data-mailmes="'+esc(key)+'" title="Correo mensual">'+MAIL_SVG+'</button></div></div>'
+        +'</div>'
+      +'</div>'
+      +'<div class="dash-group-body hidden"><div class="table-card"><div class="table-scroll"><table class="ter-table"><thead><tr><th>Fecha atención</th><th>Tipo de Sesión</th><th class="num">Monto</th><th></th></tr></thead><tbody>'+items+'</tbody></table></div></div></div>'
+      +'</div>';
+  });
+  return html;
+}
+function dashImpagasPorMes(){
   const {fechaK,sesK,pagadoK,montoK}=terKeys();
   const idK=Object.keys(allTerapias[0]||{}).find(c=>/^id$/i.test(c));
   const unpaid=allTerapias.filter(r=>pagadoK && isUnpaidVal(r[pagadoK]));
