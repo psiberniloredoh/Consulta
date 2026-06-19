@@ -1442,8 +1442,8 @@ async function fetchDayReminders(date){
 function fmtRemTime(iso){ const d=new Date(iso); const p=n=>String(n).padStart(2,"0"); return isNaN(d.getTime())?"":p(d.getHours())+":"+p(d.getMinutes()); }
 const DIAS_SEM=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
 const MESES_ES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-function fmtRemWhen(iso){ const d=new Date(iso); if(isNaN(d.getTime())) return ""; const p=n=>String(n).padStart(2,"0"); return DIAS_SEM[d.getDay()]+" "+d.getDate()+" de "+MESES_ES[d.getMonth()]+" a las "+p(d.getHours())+":"+p(d.getMinutes()); }
-function reminderMsg(name, iso){ const first=String(name||"").trim().split(" ")[0]||""; return "Hola "+first+", te recuerdo tu sesión del "+fmtRemWhen(iso)+". ¡Te espero! Saludos, Berni"; }
+function fmtRemWhen(iso){ const d=new Date(iso); if(isNaN(d.getTime())) return ""; const p=n=>String(n).padStart(2,"0"); const mes=MESES_ES[d.getMonth()]; const mesCap=mes.charAt(0).toUpperCase()+mes.slice(1); return DIAS_SEM[d.getDay()]+" "+d.getDate()+" de "+mesCap+" a las "+p(d.getHours())+":"+p(d.getMinutes()); }
+function reminderMsg(name, iso){ const first=String(name||"").trim().split(" ")[0]||""; return "Hola "+first+", \nte escribo para recordar tu sesión del "+fmtRemWhen(iso)+". \n¿Confirmas?\nSaludos, \nBerni"; }
 function buildRemindersModal(items, date){
   remList=items.filter(ev=>ev.status!=="cancelled" && ev.start && ev.start.dateTime).map(ev=>{
     return { title:ev.summary||"(sin título)", startDT:ev.start.dateTime, patient:matchPatientByTitle(ev.summary||"") };
