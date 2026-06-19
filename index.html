@@ -986,8 +986,8 @@ function renderDashboard(){
     +'<button class="dpill'+(dashSection==="impagas"?" active":"")+'" data-sec="impagas">No pagadas</button>'
     +'<button class="dpill'+(dashSection==="todas"?" active":"")+'" data-sec="todas">Todas las sesiones</button>'
     +'<button class="dpill'+(dashSection==="calendario"?" active":"")+'" data-sec="calendario">Calendario</button>'
-    +'<button class="pill-action" id="btnPrecios" style="margin-left:auto">Precios de pacientes</button>'
-    +'<button class="dpill'+(dashSection==="config"?" active":"")+'" data-sec="config">Configuración</button>'
+    +'<button class="pill-action" id="btnPrecios">Precios de pacientes</button>'
+    +'<button class="dpill'+(dashSection==="config"?" active":"")+'" data-sec="config" style="margin-left:auto">Configuración</button>'
     +'</div>';
   let body;
   if(dashSection==="calendario") body=dashCalendario();
