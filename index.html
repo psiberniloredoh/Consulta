@@ -148,6 +148,18 @@
   .imp-pill .ip-amount{font-size:14px;font-weight:600;color:var(--danger);margin-top:2px}
   .imp-pill.active .ip-month,.imp-pill.active .ip-meta,.imp-pill.active .ip-amount{color:#fff}
   .imp-sub{font-size:12.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-deep);margin:18px 0 10px}
+  .cfg-section{margin-bottom:28px}
+  .cfg-h{font-family:"Fraunces",serif;font-size:19px;margin:0 0 4px;color:var(--ink)}
+  .cfg-cats{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:760px){.cfg-cats{grid-template-columns:1fr}}
+  .cfg-cat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px}
+  .cfg-cat-title{font-weight:600;font-size:13px;margin-bottom:10px;color:var(--accent-deep);text-transform:uppercase;letter-spacing:.04em}
+  .cfg-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto;margin-bottom:12px}
+  .cfg-row{display:flex;gap:6px;align-items:center}
+  .cfg-row .cfg-input{flex:1;min-width:0}
+  .cfg-add{display:flex;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+  .cfg-add input{flex:1;min-width:0}
+  .cfg-addbtn{white-space:nowrap}
   .edit-input::placeholder{color:var(--ink-faint);opacity:1}
   .dash-bar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
   .dash-bar .ter-count{margin-left:auto}
@@ -974,18 +986,19 @@ function renderDashboard(){
     +'<button class="dpill'+(dashSection==="impagas"?" active":"")+'" data-sec="impagas">No pagadas</button>'
     +'<button class="dpill'+(dashSection==="todas"?" active":"")+'" data-sec="todas">Todas las sesiones</button>'
     +'<button class="dpill'+(dashSection==="calendario"?" active":"")+'" data-sec="calendario">Calendario</button>'
-    +'<button class="pill-action primary" id="btnNewPatient" style="margin-left:auto">+ Crear paciente</button>'
-    +'<button class="pill-action" id="btnPrecios">Precios de pacientes</button>'
+    +'<button class="pill-action" id="btnPrecios" style="margin-left:auto">Precios de pacientes</button>'
+    +'<button class="dpill'+(dashSection==="config"?" active":"")+'" data-sec="config">Configuración</button>'
     +'</div>';
   let body;
   if(dashSection==="calendario") body=dashCalendario();
+  else if(dashSection==="config") body=dashConfig();
   else if(!allTerapias.length) body='<div class="state-empty" style="margin-top:2vh"><div class="big">Sin sesiones registradas</div><p>Cuando haya datos en Terapias, aquí verás el resumen.</p></div>';
   else if(dashSection==="impagas") body=dashImpagas();
   else if(dashSection==="todas") body=dashTodas();
   else body=dashPeriodo();
   el.innerHTML=pills+'<div>'+body+'</div>';
   el.querySelectorAll(".dpill").forEach(b=>b.addEventListener("click",()=>{ dashSection=b.dataset.sec; dashEditId=null; renderDashboard(); }));
-  { const np=$("#btnNewPatient"); if(np) np.addEventListener("click", openPatientModal); const pp=$("#btnPrecios"); if(pp) pp.addEventListener("click", openPreciosModal); }
+  { const pp=$("#btnPrecios"); if(pp) pp.addEventListener("click", openPreciosModal); }
   el.querySelectorAll("[data-export]").forEach(b=>b.addEventListener("click",()=>exportDash(b.dataset.export)));
   const s=$("#dashSearch"); if(s) s.addEventListener("input",()=>{ dashTodasQuery=s.value; const w=$("#dashTodasWrap"); if(w){ w.innerHTML=dashTodasTableHtml(); wireTodas(); } });
   el.querySelectorAll("[data-toggle]").forEach(b=>b.addEventListener("click",()=>{ const g=b.closest(".dash-group"); const body=g&&g.querySelector(".dash-group-body"); if(body){ body.classList.toggle("hidden"); b.classList.toggle("open"); } }));
@@ -1000,6 +1013,7 @@ function renderDashboard(){
   el.querySelectorAll("[data-impmail]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); emailMensual(b.dataset.impmail, dashImpagaPeriodo); }));
   if(dashSection==="todas") wireTodas();
   if(dashSection==="calendario") wireCalendario();
+  if(dashSection==="config") wireConfig();
   if(dashSection==="periodo") renderPeriodoChart();
 }
 function dashPeriodo(){
@@ -1484,6 +1498,57 @@ function sendReminderMail(i){
   const email=String(emailOf(row.patient)||"").trim();
   if(!email){ toast("Este paciente no tiene correo",true); return; }
   openMailto(email, "Recordatorio de tu sesión", reminderMsg(displayName(row.patient),row.startDT));
+}
+function catTitle(def){
+  return ({ID_COMUNA:"Comunas",ID_SEXO:"Sexo",ID_ESTABLECIMIENTO:"Establecimientos escolares",ID_SESION:"Tipos de sesión"})[def.fk] || def.table;
+}
+function dashConfig(){
+  let html='<div class="cfg-section"><h3 class="cfg-h">Pacientes</h3><p class="mm-sub" style="margin:0 0 10px">Crea un nuevo paciente con su ficha y su precio.</p><button class="btn-primary inline" id="btnNewPatient">+ Crear paciente</button></div>';
+  html+='<div class="cfg-section"><h3 class="cfg-h">Catálogos</h3><p class="mm-sub" style="margin:0 0 14px">Edita o agrega opciones de las listas. Los cambios se reflejan en las fichas y sesiones. (Los identificadores se manejan solos.)</p><div class="cfg-cats">';
+  LOOKUP_DEFS.forEach(def=>{
+    const lk=lookups[def.fk];
+    html+='<div class="cfg-cat"><div class="cfg-cat-title">'+esc(catTitle(def))+'</div>';
+    if(!lk){ html+='<p class="cell-faint" style="font-size:13px">No disponible</p></div>'; return; }
+    const rows=lk.options.map(o=>'<div class="cfg-row"><input class="edit-input cfg-input" value="'+esc(String(o.label??""))+'"><button class="icon-act ok cfg-save" data-fk="'+esc(def.fk)+'" data-id="'+esc(String(o.id))+'" title="Guardar">'+CHECK_SVG+'</button></div>').join("");
+    html+='<div class="cfg-list">'+rows+'</div>'
+      +'<div class="cfg-add"><input class="edit-input" id="cfgnew_'+esc(def.fk)+'" placeholder="Agregar nueva opción…"><button class="btn-primary inline cfg-addbtn" data-fk="'+esc(def.fk)+'">Agregar</button></div>'
+      +'</div>';
+  });
+  html+='</div></div>';
+  return html;
+}
+function wireConfig(){
+  const el=$("#dashboard"); if(!el) return;
+  const np=$("#btnNewPatient"); if(np) np.addEventListener("click", openPatientModal);
+  el.querySelectorAll(".cfg-save").forEach(b=>b.addEventListener("click",()=>{ const row=b.closest(".cfg-row"); const inp=row&&row.querySelector(".cfg-input"); if(inp) saveCatItem(b.dataset.fk, b.dataset.id, inp.value); }));
+  el.querySelectorAll(".cfg-addbtn").forEach(b=>b.addEventListener("click",()=>addCatItem(b.dataset.fk)));
+}
+async function saveCatItem(fk,id,val){
+  const lk=lookups[fk]; const def=LOOKUP_DEFS.find(d=>d.fk===fk); if(!lk||!def) return;
+  const v=String(val||"").trim();
+  if(v===""){ toast("El nombre no puede quedar vacío",true); return; }
+  const upd={}; upd[lk.labelCol]=v;
+  const { error }=await sb.from(def.table).update(upd).eq(lk.keyCol, id);
+  if(error){ toast("No se pudo guardar: "+error.message,true); return; }
+  const opt=lk.options.find(o=>String(o.id)===String(id)); if(opt) opt.label=v;
+  lk.byId[id]=v;
+  toast("Guardado");
+}
+async function addCatItem(fk){
+  const lk=lookups[fk]; const def=LOOKUP_DEFS.find(d=>d.fk===fk); if(!lk||!def) return;
+  const inp=document.getElementById("cfgnew_"+fk);
+  const v=inp?inp.value.trim():"";
+  if(v===""){ toast("Escribe el nombre de la nueva opción",true); return; }
+  let maxId=0; lk.options.forEach(o=>{ const n=Number(o.id); if(!isNaN(n)&&n>maxId)maxId=n; });
+  const obj={}; obj[lk.keyCol]=maxId+1; obj[lk.labelCol]=v;
+  const { data, error }=await sb.from(def.table).insert(obj).select();
+  if(error){ toast("No se pudo agregar: "+error.message,true); return; }
+  const realId=(data&&data[0])?data[0][lk.keyCol]:(maxId+1);
+  lk.options.push({id:realId, label:v});
+  lk.options.sort((a,b)=>String(a.label??"").localeCompare(String(b.label??"")));
+  lk.byId[realId]=v;
+  toast("Opción agregada");
+  if(dashSection==="config") renderDashboard();
 }
 function openPatientModal(){
   const sample=patients[0]||{};
