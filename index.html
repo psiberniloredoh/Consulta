@@ -1400,7 +1400,9 @@ function ensureTokenClient(){
     tokenClient=google.accounts.oauth2.initTokenClient({
       client_id:cid,
       scope:"https://www.googleapis.com/auth/calendar.events.readonly",
-      callback:(resp)=>{ if(resp&&resp.access_token){ googleToken=resp.access_token; const a=calPendingAction; calPendingAction=null; if(a) a(); } else { toast("No se pudo conectar con Google",true); } }
+      hint: GOOGLE_CALENDAR_ID,
+      callback:(resp)=>{ tokenClient.__retry=false; if(resp&&resp.access_token){ googleToken=resp.access_token; const a=calPendingAction; calPendingAction=null; if(a) a(); } else { toast("No se pudo conectar con Google",true); } },
+      error_callback:(err)=>{ if(!tokenClient.__retry){ tokenClient.__retry=true; tokenClient.requestAccessToken({prompt:"select_account"}); } else { tokenClient.__retry=false; toast("No se pudo conectar con Google",true); } }
     });
     tokenClient._cid=cid;
   }
@@ -1408,8 +1410,9 @@ function ensureTokenClient(){
 }
 function withGoogle(action){
   const tc=ensureTokenClient(); if(!tc) return;
-  if(googleToken){ action(); }
-  else { calPendingAction=action; tc.requestAccessToken(); }
+  if(googleToken){ action(); return; }
+  calPendingAction=action;
+  tc.requestAccessToken({prompt:""});
 }
 function traerCitas(){ withGoogle(fetchCalendarEvents); }
 async function gcalFetchItems(timeMin, timeMax){
