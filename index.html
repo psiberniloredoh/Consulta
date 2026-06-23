@@ -178,7 +178,7 @@
   .dash-chart{height:300px;margin-bottom:24px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
   .dgname{font-family:"Fraunces",serif;font-size:17px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .dgsum{font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap}
-  .ter-table th.num,.ter-table td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .ter-table th.num,.ter-table td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   .ter-table tbody tr.ter-total td{font-weight:600;background:var(--accent-wash);border-top:2px solid var(--line-strong)}
   .dash-subcount{font-size:12.5px;color:var(--ink-soft);margin-bottom:8px}
   .cal-wrap{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
@@ -232,18 +232,18 @@
   .ter-table.master th{white-space:nowrap}
   .ter-table.master td{vertical-align:middle}
   .ter-table.master th:nth-child(1),.ter-table.master td:nth-child(1){width:132px;white-space:nowrap}
-  .ter-table.master th:nth-child(3),.ter-table.master td:nth-child(3){width:80px}
-  .ter-table.master th:nth-child(4),.ter-table.master td:nth-child(4){width:84px}
-  .ter-table.master th:nth-child(5),.ter-table.master td:nth-child(5){width:88px}
+  .ter-table.master th:nth-child(3),.ter-table.master td:nth-child(3){width:94px}
+  .ter-table.master th:nth-child(4),.ter-table.master td:nth-child(4){width:92px}
+  .ter-table.master th:nth-child(5),.ter-table.master td:nth-child(5){width:96px}
   .ter-table.master th:nth-child(6),.ter-table.master td:nth-child(6){width:62px}
-  .ter-table.master th:nth-child(7),.ter-table.master td:nth-child(7){width:112px}
-  .ter-table.master th:nth-child(8),.ter-table.master td:nth-child(8){width:130px}
+  .ter-table.master th:nth-child(7),.ter-table.master td:nth-child(7){width:108px}
+  .ter-table.master th:nth-child(8),.ter-table.master td:nth-child(8){width:124px}
   .ter-table.master th:nth-child(9),.ter-table.master td:nth-child(9){width:70px}
   .ter-table.master.tpat th:nth-child(1),.ter-table.master.tpat td:nth-child(1){width:140px;white-space:nowrap}
   .ter-table.master.tpat th:nth-child(2),.ter-table.master.tpat td:nth-child(2){width:110px}
-  .ter-table.master.tpat th:nth-child(3),.ter-table.master.tpat td:nth-child(3){width:78px}
-  .ter-table.master.tpat th:nth-child(4),.ter-table.master.tpat td:nth-child(4){width:82px}
-  .ter-table.master.tpat th:nth-child(5),.ter-table.master.tpat td:nth-child(5){width:86px}
+  .ter-table.master.tpat th:nth-child(3),.ter-table.master.tpat td:nth-child(3){width:92px}
+  .ter-table.master.tpat th:nth-child(4),.ter-table.master.tpat td:nth-child(4){width:88px}
+  .ter-table.master.tpat th:nth-child(5),.ter-table.master.tpat td:nth-child(5){width:92px}
   .ter-table.master.tpat th:nth-child(6),.ter-table.master.tpat td:nth-child(6){width:64px}
   .ter-table.master.tpat th:nth-child(7),.ter-table.master.tpat td:nth-child(7){width:auto}
   .ter-table.master.tpat th:nth-child(8),.ter-table.master.tpat td:nth-child(8){width:auto}
@@ -843,7 +843,7 @@ function currentTerapiaRows(){
   const {fechaK}=terapiaCols(terapias);
   let rows=terapias.slice();
   if(terapiasPeriodo && fechaK) rows=rows.filter(r=>periodOf(r[fechaK])===terapiasPeriodo);
-  if(fechaK) rows.sort((a,b)=>String(b[fechaK]||"").localeCompare(String(a[fechaK]||"")));
+  if(fechaK) rows.sort((a,b)=>dateSortVal(b[fechaK]).localeCompare(dateSortVal(a[fechaK])));
   return rows;
 }
 function renderTerapias(){
@@ -892,12 +892,13 @@ function terRowEditHtml(r,c,id){
   const tipoOpts=((lookups["ID_SESION"]&&lookups["ID_SESION"].options)||[]).map(o=>'<option value="'+esc(String(o.id))+'"'+(String(o.id)===String(r[c.sesK])?' selected':'')+'>'+esc(String(o.label??""))+'</option>').join("");
   const pagadoVal=c.pagadoK&&!isUnpaidVal(r[c.pagadoK]);
   const ti=(f,v)=>'<td><input class="edit-input ted" data-tf="'+f+'" type="text" value="'+esc(v==null?"":String(v))+'"></td>';
+  const tm=(f,v)=>'<td><input class="edit-input ted num" data-tf="'+f+'" type="text" value="'+esc(fmtMiles(v))+'"></td>';
   return '<tr class="row-editing">'
     +'<td><input class="edit-input ted" data-tf="fecha" type="datetime-local" value="'+esc(fdt)+'"></td>'
     +'<td><select class="edit-input ted" data-tf="tipo">'+tipoOpts+'</select></td>'
-    +ti("monto", r[c.montoK])
-    +ti("liquido", c.liquidoK?r[c.liquidoK]:"")
-    +ti("retenido", c.retenidoK?r[c.retenidoK]:"")
+    +tm("monto", r[c.montoK])
+    +tm("liquido", c.liquidoK?r[c.liquidoK]:"")
+    +tm("retenido", c.retenidoK?r[c.retenidoK]:"")
     +'<td><select class="edit-input ted" data-tf="pagado"><option value="true"'+(pagadoVal?' selected':'')+'>Sí</option><option value="false"'+(!pagadoVal?' selected':'')+'>No</option></select></td>'
     +ti("tema", r[c.temaK])
     +ti("coment", r[c.comentK])
@@ -910,9 +911,13 @@ function wireTerEdit(){
   w.querySelectorAll("[data-tercancel]").forEach(b=>b.addEventListener("click",()=>{ terEditId=null; renderTerapias(); }));
   w.querySelectorAll("[data-tersave]").forEach(b=>b.addEventListener("click",()=>saveTerRow(b.dataset.tersave)));
   w.querySelectorAll("[data-terdel]").forEach(b=>b.addEventListener("click",()=>deleteTerRow(b.dataset.terdel)));
-  const me=w.querySelector('.row-editing .ted[data-tf="monto"]');
-  if(me && currentPatient && boletaFor(rutOf(currentPatient))){
-    me.addEventListener("input",()=>{ const b=calcBoleta(me.value); const li=w.querySelector('.row-editing .ted[data-tf="liquido"]'); const re=w.querySelector('.row-editing .ted[data-tf="retenido"]'); if(li) li.value=b.liquido; if(re) re.value=b.retenido; });
+  const get=f=>w.querySelector('.row-editing .ted[data-tf="'+f+'"]');
+  const mo=get("monto"), li=get("liquido"), re=get("retenido");
+  if(mo&&li&&re){
+    const bol = currentPatient && boletaFor(rutOf(currentPatient));
+    mo.addEventListener("input",()=>{ mo.value=fmtMiles(parseNum(mo.value)); const lr=calcLiqRet(mo.value, bol); li.value=fmtMiles(lr.liquido); re.value=fmtMiles(lr.retenido); });
+    re.addEventListener("input",()=>{ re.value=fmtMiles(parseNum(re.value)); const m=parseNum(mo.value)||0; li.value=fmtMiles(m-(parseNum(re.value)||0)); });
+    li.addEventListener("input",()=>{ li.value=fmtMiles(parseNum(li.value)); const m=parseNum(mo.value)||0; re.value=fmtMiles(m-(parseNum(li.value)||0)); });
   }
 }
 async function saveTerRow(id){
@@ -923,13 +928,13 @@ async function saveTerRow(id){
   document.querySelectorAll(".row-editing .ted").forEach(el=>{
     const f=el.dataset.tf; let v=el.value;
     if(f==="fecha"){ if(c.fechaK){ let dv=v?v.replace("T"," "):""; if(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(dv)) dv+=":00"; upd[c.fechaK]=dv||null; } }
-    else if(f==="monto"){ if(c.montoK){ upd[c.montoK]= v===""?null:(isNaN(Number(v))?v:Number(v)); } }
+    else if(f==="monto"){ if(c.montoK){ const n=parseNum(v); upd[c.montoK]= n===""?null:n; } }
     else if(f==="pagado"){ if(c.pagadoK){ upd[c.pagadoK]=(v==="true"); } }
     else if(f==="tipo"){ if(c.sesK){ const o=((lookups["ID_SESION"]&&lookups["ID_SESION"].options)||[]).find(x=>String(x.id)===v); upd[c.sesK]= o?o.id:(v===""?null:v); } }
     else if(f==="tema"){ if(c.temaK){ upd[c.temaK]= v===""?null:v; } }
     else if(f==="coment"){ if(c.comentK){ upd[c.comentK]= v===""?null:v; } }
-    else if(f==="liquido"){ if(c.liquidoK){ upd[c.liquidoK]= v===""?null:(isNaN(Number(v))?v:Number(v)); } }
-    else if(f==="retenido"){ if(c.retenidoK){ upd[c.retenidoK]= v===""?null:(isNaN(Number(v))?v:Number(v)); } }
+    else if(f==="liquido"){ if(c.liquidoK){ const n=parseNum(v); upd[c.liquidoK]= n===""?null:n; } }
+    else if(f==="retenido"){ if(c.retenidoK){ const n=parseNum(v); upd[c.retenidoK]= n===""?null:n; } }
   });
   const { error }=await sb.from("Terapias").update(upd).eq(c.idK, id);
   if(error){ toast("No se pudo guardar: "+error.message,true); return; }
@@ -1040,20 +1045,20 @@ function renderDashboard(){
   if(dashSection==="periodo") renderPeriodoChart();
 }
 function dashPeriodo(){
-  const {fechaK, montoK}=terKeys();
+  const {fechaK, montoK, liquidoK, retenidoK}=terKeys();
   const map={};
-  allTerapias.forEach(r=>{ const per=periodOf(r[fechaK]); if(!per)return; if(!map[per])map[per]={c:0,s:0}; map[per].c++; map[per].s+=Number(r[montoK])||0; });
+  allTerapias.forEach(r=>{ const per=periodOf(r[fechaK]); if(!per)return; if(!map[per])map[per]={c:0,s:0,l:0,re:0}; map[per].c++; map[per].s+=Number(r[montoK])||0; map[per].l+=(liquidoK?Number(r[liquidoK]):0)||0; map[per].re+=(retenidoK?Number(r[retenidoK]):0)||0; });
   const periods=Object.keys(map).sort().reverse();
-  let tc=0,ts=0; periods.forEach(p=>{tc+=map[p].c; ts+=map[p].s;});
+  let tc=0,ts=0,tl=0,tr=0; periods.forEach(p=>{tc+=map[p].c; ts+=map[p].s; tl+=map[p].l; tr+=map[p].re;});
   const rows=periods.map(p=>{
     const avg = map[p].c ? Math.round(map[p].s/map[p].c) : 0;
-    return '<tr><td>'+esc(periodLabel(p))+'</td><td class="num">'+map[p].c+'</td><td class="num">'+esc(fmtMonto(map[p].s)||"$0")+'</td><td class="num">'+esc(fmtMonto(avg)||"$0")+'</td></tr>';
+    return '<tr><td>'+esc(periodLabel(p))+'</td><td class="num">'+map[p].c+'</td><td class="num">'+esc(fmtMonto(avg)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].s)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].l)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].re)||"$0")+'</td></tr>';
   }).join("");
   const avgTot = tc ? Math.round(ts/tc) : 0;
-  const total='<tr class="ter-total"><td>Total</td><td class="num">'+tc+'</td><td class="num">'+esc(fmtMonto(ts)||"$0")+'</td><td class="num">'+esc(fmtMonto(avgTot)||"$0")+'</td></tr>';
+  const total='<tr class="ter-total"><td>Total</td><td class="num">'+tc+'</td><td class="num">'+esc(fmtMonto(avgTot)||"$0")+'</td><td class="num">'+esc(fmtMonto(ts)||"$0")+'</td><td class="num">'+esc(fmtMonto(tl)||"$0")+'</td><td class="num">'+esc(fmtMonto(tr)||"$0")+'</td></tr>';
   return '<div class="dash-chart"><canvas id="dashChart"></canvas></div>'
     +'<div class="dash-bar"><span class="ter-count">'+periods.length+' periodos · '+tc+' sesiones</span><button class="btn-primary inline" data-export="periodo">Descargar Excel</button></div>'
-    +'<div class="table-card"><div class="table-scroll"><table class="ter-table"><thead><tr><th>Periodo</th><th class="num">Sesiones</th><th class="num">Monto total</th><th class="num">Promedio por sesión</th></tr></thead><tbody>'+rows+total+'</tbody></table></div></div>';
+    +'<div class="table-card"><div class="table-scroll"><table class="ter-table"><thead><tr><th>Periodo</th><th class="num">Sesiones</th><th class="num">Promedio por sesión</th><th class="num">Monto total</th><th class="num">Líquido</th><th class="num">Retenido</th></tr></thead><tbody>'+rows+total+'</tbody></table></div></div>';
 }
 let periodoChart=null;
 function renderPeriodoChart(){
@@ -1109,7 +1114,7 @@ function dashImpagasPorPaciente(){
   const totalSum=entries.reduce((a,e)=>a+e[1].sum,0);
   let html='<div class="dash-bar"><span class="ter-count">'+unpaid.length+' sesiones impagas · '+esc(fmtMonto(totalSum)||"$0")+' adeudado</span><button class="btn-primary inline" data-export="impagas">Descargar Excel</button></div>';
   entries.forEach(([key,g])=>{
-    g.rows.sort((a,b)=>String(b[fechaK]||"").localeCompare(String(a[fechaK]||"")));
+    g.rows.sort((a,b)=>dateSortVal(b[fechaK]).localeCompare(dateSortVal(a[fechaK])));
     const items=g.rows.map(r=>'<tr><td>'+esc(fmtDateTime(r[fechaK])||"—")+'</td><td>'+esc(tipoSesion(r,sesK)||"—")+'</td><td class="num">'+esc(fmtMonto(r[montoK])||"—")+'</td><td class="num"><button class="btn-pay" data-pay="'+esc(String(idK?r[idK]:""))+'">Marcar pagada</button></td></tr>').join("");
     html+='<div class="dash-group">'
       +'<div class="dash-group-head">'
@@ -1150,7 +1155,7 @@ function dashImpagasPorMes(){
   const entries=Object.entries(groups).sort((a,b)=>String(a[1].name).localeCompare(String(b[1].name),"es",{sensitivity:"base"}));
   html+='<div class="imp-sub">Deudores de '+esc(periodLabel(sel))+' — '+esc(fmtMonto(byPeriod[sel].sum)||"$0")+'</div>';
   entries.forEach(([key,g])=>{
-    g.rows.sort((a,b)=>String(b[fechaK]||"").localeCompare(String(a[fechaK]||"")));
+    g.rows.sort((a,b)=>dateSortVal(b[fechaK]).localeCompare(dateSortVal(a[fechaK])));
     const items=g.rows.map(r=>'<tr><td>'+esc(fmtDateTime(r[fechaK])||"—")+'</td><td>'+esc(tipoSesion(r,sesK)||"—")+'</td><td class="num">'+esc(fmtMonto(r[montoK])||"—")+'</td><td class="num"><button class="btn-pay" data-pay="'+esc(String(idK?r[idK]:""))+'">Marcar pagada</button></td></tr>').join("");
     html+='<div class="dash-group">'
       +'<div class="dash-group-head">'
@@ -1256,10 +1261,14 @@ function boletaFor(rut){
   const v=p[k];
   return v===true || /^(true|sí|si|1)$/i.test(String(v==null?"":v));
 }
-function calcBoleta(monto){
-  const m=Number(monto); if(monto===""||monto==null||isNaN(m)) return {retenido:"",liquido:""};
-  const ret=Math.round(m*getRetencionPct()/100);
-  return { retenido:ret, liquido:m-ret };
+function parseNum(s){ const d=String(s==null?"":s).replace(/[^\d-]/g,""); return d===""||d==="-"?"":Number(d); }
+function fmtMiles(n){ if(n===""||n==null||isNaN(Number(n))) return ""; const x=Math.round(Number(n)); const neg=x<0; return (neg?"-":"")+String(Math.abs(x)).replace(/\B(?=(\d{3})+(?!\d))/g,"."); }
+function dateSortVal(v){ return String(v==null?"":v).replace("T"," "); }
+function calcLiqRet(monto, hasBoleta){
+  const m=parseNum(monto);
+  if(m==="") return {liquido:"",retenido:""};
+  if(hasBoleta){ const ret=Math.round(m*getRetencionPct()/100); return {retenido:ret, liquido:m-ret}; }
+  return {retenido:0, liquido:m};
 }
 function rowViewHtml(r,c,id){
   const tipo=(c.sesK&&lookups["ID_SESION"])?(lookups["ID_SESION"].byId[r[c.sesK]]??""):"";
@@ -1284,12 +1293,13 @@ function rowEditHtml(r,c,id){
   const tipoOpts=((lookups["ID_SESION"]&&lookups["ID_SESION"].options)||[]).map(o=>'<option value="'+esc(String(o.id))+'"'+(String(o.id)===String(r[c.sesK])?' selected':'')+'>'+esc(String(o.label??""))+'</option>').join("");
   const pagadoVal = c.pagadoK && !isUnpaidVal(r[c.pagadoK]);
   const ti=(f,v)=>'<td><input class="edit-input ed" data-f="'+f+'" type="text" value="'+esc(v==null?"":String(v))+'"></td>';
+  const tm=(f,v)=>'<td><input class="edit-input ed num" data-f="'+f+'" type="text" value="'+esc(fmtMiles(v))+'"></td>';
   return '<tr class="row-editing">'
     +'<td><input class="edit-input ed" data-f="fecha" type="datetime-local" value="'+esc(fdt)+'"></td>'
     +'<td>'+esc(nameForRut(rOf(r)))+'</td>'
-    +ti("monto", r[c.montoK])
-    +ti("liquido", c.liquidoK?r[c.liquidoK]:"")
-    +ti("retenido", c.retenidoK?r[c.retenidoK]:"")
+    +tm("monto", r[c.montoK])
+    +tm("liquido", c.liquidoK?r[c.liquidoK]:"")
+    +tm("retenido", c.retenidoK?r[c.retenidoK]:"")
     +'<td><select class="edit-input ed" data-f="pagado"><option value="true"'+(pagadoVal?' selected':'')+'>Sí</option><option value="false"'+(!pagadoVal?' selected':'')+'>No</option></select></td>'
     +'<td><select class="edit-input ed" data-f="tipo">'+tipoOpts+'</select></td>'
     +ti("tema", r[c.temaK])
@@ -1298,7 +1308,7 @@ function rowEditHtml(r,c,id){
 }
 function dashTodasTableHtml(){
   const c=terMasterCols();
-  let rows=allTerapias.slice().sort((a,b)=>String(b[c.fechaK]||"").localeCompare(String(a[c.fechaK]||"")));
+  let rows=allTerapias.slice().sort((a,b)=>dateSortVal(b[c.fechaK]).localeCompare(dateSortVal(a[c.fechaK])));
   const q=(dashTodasQuery||"").trim().toLowerCase();
   if(q) rows=rows.filter(r=>nameForRut(rOf(r)).toLowerCase().includes(q));
   const thead='<tr><th>Fecha atención</th><th>Paciente</th><th class="num">Monto</th><th class="num">Líquido</th><th class="num">Retenido</th><th>Pagado</th><th>Tipo de Sesión</th><th>Tema Principal</th><th></th></tr>';
@@ -1314,11 +1324,15 @@ function wireTodas(){
   w.querySelectorAll("[data-cancel]").forEach(b=>b.addEventListener("click",()=>{ dashEditId=null; w.innerHTML=dashTodasTableHtml(); wireTodas(); }));
   w.querySelectorAll("[data-save]").forEach(b=>b.addEventListener("click",()=>saveTodasRow(b.dataset.save)));
   w.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>deleteTodasRow(b.dataset.del)));
-  const me=w.querySelector('.row-editing .ed[data-f="monto"]');
-  if(me){
+  const get=f=>w.querySelector('.row-editing .ed[data-f="'+f+'"]');
+  const mo=get("monto"), li=get("liquido"), re=get("retenido");
+  if(mo&&li&&re){
     const c=terMasterCols();
     const row=allTerapias.find(r=>String(c.idK?r[c.idK]:"")===String(dashEditId));
-    if(row && boletaFor(rOf(row))){ me.addEventListener("input",()=>{ const b=calcBoleta(me.value); const li=w.querySelector('.row-editing .ed[data-f="liquido"]'); const re=w.querySelector('.row-editing .ed[data-f="retenido"]'); if(li) li.value=b.liquido; if(re) re.value=b.retenido; }); }
+    const bol = row && boletaFor(rOf(row));
+    mo.addEventListener("input",()=>{ mo.value=fmtMiles(parseNum(mo.value)); const lr=calcLiqRet(mo.value, bol); li.value=fmtMiles(lr.liquido); re.value=fmtMiles(lr.retenido); });
+    re.addEventListener("input",()=>{ re.value=fmtMiles(parseNum(re.value)); const m=parseNum(mo.value)||0; li.value=fmtMiles(m-(parseNum(re.value)||0)); });
+    li.addEventListener("input",()=>{ li.value=fmtMiles(parseNum(li.value)); const m=parseNum(mo.value)||0; re.value=fmtMiles(m-(parseNum(li.value)||0)); });
   }
 }
 async function saveTodasRow(id){
@@ -1329,12 +1343,12 @@ async function saveTodasRow(id){
   document.querySelectorAll(".row-editing .ed").forEach(el=>{
     const f=el.dataset.f; let v=el.value;
     if(f==="fecha"){ if(c.fechaK){ let dv=v?v.replace("T"," "):""; if(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(dv)) dv+=":00"; upd[c.fechaK]=dv||null; } }
-    else if(f==="monto"){ if(c.montoK){ upd[c.montoK]= v===""?null:(isNaN(Number(v))?v:Number(v)); } }
+    else if(f==="monto"){ if(c.montoK){ const n=parseNum(v); upd[c.montoK]= n===""?null:n; } }
     else if(f==="pagado"){ if(c.pagadoK){ upd[c.pagadoK]=(v==="true"); } }
     else if(f==="tipo"){ if(c.sesK){ const o=((lookups["ID_SESION"]&&lookups["ID_SESION"].options)||[]).find(x=>String(x.id)===v); upd[c.sesK]= o?o.id:(v===""?null:v); } }
     else if(f==="tema"){ if(c.temaK){ upd[c.temaK]= v===""?null:v; } }
-    else if(f==="liquido"){ if(c.liquidoK){ upd[c.liquidoK]= v===""?null:(isNaN(Number(v))?v:Number(v)); } }
-    else if(f==="retenido"){ if(c.retenidoK){ upd[c.retenidoK]= v===""?null:(isNaN(Number(v))?v:Number(v)); } }
+    else if(f==="liquido"){ if(c.liquidoK){ const n=parseNum(v); upd[c.liquidoK]= n===""?null:n; } }
+    else if(f==="retenido"){ if(c.retenidoK){ const n=parseNum(v); upd[c.retenidoK]= n===""?null:n; } }
   });
   const { error }=await sb.from("Terapias").update(upd).eq(c.idK, id);
   if(error){ toast("No se pudo guardar: "+error.message,true); return; }
@@ -1422,7 +1436,7 @@ function lastMontoFor(rut){
   const c=terMasterCols();
   const rows=allTerapias.filter(r=>normRut(rOf(r))===normRut(rut) && r[c.montoK]!=null && r[c.montoK]!=="");
   if(!rows.length) return "";
-  rows.sort((a,b)=>String(b[c.fechaK]||"").localeCompare(String(a[c.fechaK]||"")));
+  rows.sort((a,b)=>dateSortVal(b[c.fechaK]).localeCompare(dateSortVal(a[c.fechaK])));
   return rows[0][c.montoK];
 }
 function tipoLabel(tipoId){
@@ -1440,7 +1454,7 @@ function basePriceFor(rut){
   const isCoordRow=r=>/coordinacion/.test(normTxt(tipoLabel(r[c.sesK])));
   const normal=rows.filter(r=>!isCoordRow(r));
   const pool=normal.length?normal:rows;
-  pool.sort((a,b)=>String(b[c.fechaK]||"").localeCompare(String(a[c.fechaK]||"")));
+  pool.sort((a,b)=>dateSortVal(b[c.fechaK]).localeCompare(dateSortVal(a[c.fechaK])));
   return pool[0][c.montoK];
 }
 function priceForRow(rut, tipoId){
@@ -1664,21 +1678,22 @@ function openPreciosModal(){
   const body=list.map(p=>{
     const rut=rutOf(p); const cur=preciosByRut[normRut(rut)];
     const val=(cur!=null&&cur!=="")?String(cur):"";
-    return '<tr><td>'+esc(displayName(p))+'</td><td style="white-space:nowrap;color:var(--ink-faint)">'+esc(String(rut))+'</td><td><input class="edit-input pp" data-rut="'+esc(String(rut))+'" data-orig="'+esc(val)+'" type="text" value="'+esc(val)+'" style="max-width:140px"></td></tr>';
+    return '<tr><td>'+esc(displayName(p))+'</td><td style="white-space:nowrap;color:var(--ink-faint)">'+esc(String(rut))+'</td><td><input class="edit-input pp num" data-rut="'+esc(String(rut))+'" data-orig="'+esc(val)+'" type="text" value="'+esc(fmtMiles(val))+'" style="max-width:140px"></td></tr>';
   }).join("");
   $("#preciosBody").innerHTML='<table class="ter-table"><thead><tr><th>Paciente</th><th>RUT</th><th>Precio por sesión</th></tr></thead><tbody>'+body+'</tbody></table>';
+  document.querySelectorAll("#preciosBody .pp").forEach(el=>el.addEventListener("input",()=>{ el.value=fmtMiles(parseNum(el.value)); }));
   $("#preciosModal").classList.remove("hidden");
 }
 async function savePrecios(){
   const changes=[];
-  document.querySelectorAll("#preciosBody .pp").forEach(el=>{ const v=el.value.trim(); const orig=el.dataset.orig||""; if(v!==orig) changes.push({ rut:el.dataset.rut, val:v }); });
+  document.querySelectorAll("#preciosBody .pp").forEach(el=>{ const v=String(parseNum(el.value)); const orig=el.dataset.orig||""; if((v==="" ? "" : v)!==orig) changes.push({ rut:el.dataset.rut, val:parseNum(el.value) }); });
   if(!changes.length){ $("#preciosModal").classList.add("hidden"); toast("No hubo cambios"); return; }
-  const payload=changes.map(c=>({ RUT:c.rut, PRECIO: c.val===""?null:(isNaN(Number(c.val))?c.val:Number(c.val)) }));
+  const payload=changes.map(c=>({ RUT:c.rut, PRECIO: c.val===""?null:c.val }));
   const btn=$("#preciosSave"); if(btn){ btn.disabled=true; btn.textContent="Guardando…"; }
   const { error }=await sb.from(TABLE_PRECIOS).upsert(payload, { onConflict:"RUT" });
   if(btn){ btn.disabled=false; btn.textContent="Guardar cambios"; }
   if(error){ toast("No se pudo guardar: "+error.message,true); return; }
-  changes.forEach(c=>{ const num = c.val===""?undefined:(isNaN(Number(c.val))?c.val:Number(c.val)); if(num===undefined) delete preciosByRut[normRut(c.rut)]; else preciosByRut[normRut(c.rut)]=num; });
+  changes.forEach(c=>{ if(c.val==="") delete preciosByRut[normRut(c.rut)]; else preciosByRut[normRut(c.rut)]=c.val; });
   $("#preciosModal").classList.add("hidden");
   toast(changes.length+(changes.length===1?" precio actualizado":" precios actualizados"));
 }
@@ -1695,7 +1710,7 @@ function buildImportReview(items){
     const rut=p?rutOf(p):"";
     const monto=p?priceForRow(rut, tipoId!=null?String(tipoId):""):"";
     const bol=!!p&&boletaFor(rut);
-    const bv=bol?calcBoleta(monto):{liquido:"",retenido:""};
+    const bv=calcLiqRet(monto, bol);
     return { eventId:ev.id, startDT, allDay, title, rut, tipoId:tipoId!=null?String(tipoId):"", monto, liquido:bv.liquido, retenido:bv.retenido, already, include:!!p&&!already&&!allDay };
   });
   renderImportModal();
@@ -1703,10 +1718,10 @@ function buildImportReview(items){
 function impRecalcBoleta(i){
   const w=$("#importBody"); if(!w) return;
   const row=importRows[i];
-  if(row.rut && boletaFor(row.rut)){ const bv=calcBoleta(row.monto); row.liquido=bv.liquido; row.retenido=bv.retenido; }
-  else { row.liquido=""; row.retenido=""; }
-  const li=w.querySelector('[data-imp-liq="'+i+'"]'); if(li) li.value=row.liquido;
-  const re=w.querySelector('[data-imp-ret="'+i+'"]'); if(re) re.value=row.retenido;
+  const bv=calcLiqRet(row.monto, row.rut && boletaFor(row.rut));
+  row.liquido=bv.liquido; row.retenido=bv.retenido;
+  const li=w.querySelector('[data-imp-liq="'+i+'"]'); if(li) li.value=fmtMiles(row.liquido);
+  const re=w.querySelector('[data-imp-ret="'+i+'"]'); if(re) re.value=fmtMiles(row.retenido);
 }
 function renderImportModal(){
   const total=importRows.length;
@@ -1722,9 +1737,9 @@ function renderImportModal(){
       +'<td>'+esc(row.title)+'</td>'
       +'<td><select class="edit-input" data-imp-rut="'+i+'"'+(dis?' disabled':'')+'>'+patOpts(row.rut)+'</select></td>'
       +'<td><select class="edit-input" data-imp-tipo="'+i+'"'+(dis?' disabled':'')+'>'+tipoOpts(row.tipoId)+'</select></td>'
-      +'<td><input class="edit-input" data-imp-monto="'+i+'" type="text" value="'+esc(row.monto)+'"'+(dis?' disabled':'')+'></td>'
-      +'<td><input class="edit-input" data-imp-liq="'+i+'" type="text" value="'+esc(row.liquido)+'"'+(dis?' disabled':'')+'></td>'
-      +'<td><input class="edit-input" data-imp-ret="'+i+'" type="text" value="'+esc(row.retenido)+'"'+(dis?' disabled':'')+'></td>'
+      +'<td><input class="edit-input num" data-imp-monto="'+i+'" type="text" value="'+esc(fmtMiles(row.monto))+'"'+(dis?' disabled':'')+'></td>'
+      +'<td><input class="edit-input num" data-imp-liq="'+i+'" type="text" value="'+esc(fmtMiles(row.liquido))+'"'+(dis?' disabled':'')+'></td>'
+      +'<td><input class="edit-input num" data-imp-ret="'+i+'" type="text" value="'+esc(fmtMiles(row.retenido))+'"'+(dis?' disabled':'')+'></td>'
       +'<td>'+(row.already?'<span class="imp-badge">ya en Terapias</span>':'')+'</td>'
       +'</tr>';
   }).join("");
@@ -1733,11 +1748,11 @@ function renderImportModal(){
   $("#importCount").textContent = total+(total===1?" cita encontrada":" citas encontradas");
   const w=$("#importBody");
   w.querySelectorAll("[data-imp-inc]").forEach(el=>el.addEventListener("change",()=>{ importRows[+el.dataset.impInc].include=el.checked; updateImportBtn(); }));
-  w.querySelectorAll("[data-imp-rut]").forEach(el=>el.addEventListener("change",()=>{ const i=+el.dataset.impRut; importRows[i].rut=el.value; importRows[i].monto=priceForRow(el.value,importRows[i].tipoId); const mi=w.querySelector('[data-imp-monto="'+i+'"]'); if(mi) mi.value=importRows[i].monto; impRecalcBoleta(i); updateImportBtn(); }));
-  w.querySelectorAll("[data-imp-tipo]").forEach(el=>el.addEventListener("change",()=>{ const i=+el.dataset.impTipo; importRows[i].tipoId=el.value; importRows[i].monto=priceForRow(importRows[i].rut,el.value); const mi=w.querySelector('[data-imp-monto="'+i+'"]'); if(mi) mi.value=importRows[i].monto; impRecalcBoleta(i); }));
-  w.querySelectorAll("[data-imp-monto]").forEach(el=>el.addEventListener("input",()=>{ const i=+el.dataset.impMonto; importRows[i].monto=el.value; impRecalcBoleta(i); }));
-  w.querySelectorAll("[data-imp-liq]").forEach(el=>el.addEventListener("input",()=>{ importRows[+el.dataset.impLiq].liquido=el.value; }));
-  w.querySelectorAll("[data-imp-ret]").forEach(el=>el.addEventListener("input",()=>{ importRows[+el.dataset.impRet].retenido=el.value; }));
+  w.querySelectorAll("[data-imp-rut]").forEach(el=>el.addEventListener("change",()=>{ const i=+el.dataset.impRut; importRows[i].rut=el.value; importRows[i].monto=priceForRow(el.value,importRows[i].tipoId); const mi=w.querySelector('[data-imp-monto="'+i+'"]'); if(mi) mi.value=fmtMiles(importRows[i].monto); impRecalcBoleta(i); updateImportBtn(); }));
+  w.querySelectorAll("[data-imp-tipo]").forEach(el=>el.addEventListener("change",()=>{ const i=+el.dataset.impTipo; importRows[i].tipoId=el.value; importRows[i].monto=priceForRow(importRows[i].rut,el.value); const mi=w.querySelector('[data-imp-monto="'+i+'"]'); if(mi) mi.value=fmtMiles(importRows[i].monto); impRecalcBoleta(i); }));
+  w.querySelectorAll("[data-imp-monto]").forEach(el=>el.addEventListener("input",()=>{ const i=+el.dataset.impMonto; importRows[i].monto=parseNum(el.value); el.value=fmtMiles(importRows[i].monto); impRecalcBoleta(i); }));
+  w.querySelectorAll("[data-imp-liq]").forEach(el=>el.addEventListener("input",()=>{ const i=+el.dataset.impLiq; importRows[i].liquido=parseNum(el.value); el.value=fmtMiles(importRows[i].liquido); const m=parseNum(importRows[i].monto)||0; importRows[i].retenido=m-(parseNum(importRows[i].liquido)||0); const re=w.querySelector('[data-imp-ret="'+i+'"]'); if(re) re.value=fmtMiles(importRows[i].retenido); }));
+  w.querySelectorAll("[data-imp-ret]").forEach(el=>el.addEventListener("input",()=>{ const i=+el.dataset.impRet; importRows[i].retenido=parseNum(el.value); el.value=fmtMiles(importRows[i].retenido); const m=parseNum(importRows[i].monto)||0; importRows[i].liquido=m-(parseNum(importRows[i].retenido)||0); const li=w.querySelector('[data-imp-liq="'+i+'"]'); if(li) li.value=fmtMiles(importRows[i].liquido); }));
   updateImportBtn();
   $("#importModal").classList.remove("hidden");
 }
@@ -1756,9 +1771,9 @@ async function confirmImport(){
     o.RUT=r.rut;
     if(c.fechaK) o[c.fechaK]=dtToStorage(r.startDT);
     if(c.sesK && r.tipoId!=="") o[c.sesK]= isNaN(Number(r.tipoId))?r.tipoId:Number(r.tipoId);
-    if(c.montoK) o[c.montoK]= r.monto===""?null:(isNaN(Number(r.monto))?r.monto:Number(r.monto));
-    if(c.liquidoK) o[c.liquidoK]= r.liquido===""||r.liquido==null?null:(isNaN(Number(r.liquido))?r.liquido:Number(r.liquido));
-    if(c.retenidoK) o[c.retenidoK]= r.retenido===""||r.retenido==null?null:(isNaN(Number(r.retenido))?r.retenido:Number(r.retenido));
+    if(c.montoK){ const n=parseNum(r.monto); o[c.montoK]= n===""?null:n; }
+    if(c.liquidoK){ const n=parseNum(r.liquido); o[c.liquidoK]= n===""?null:n; }
+    if(c.retenidoK){ const n=parseNum(r.retenido); o[c.retenidoK]= n===""?null:n; }
     if(c.pagadoK) o[c.pagadoK]=false;
     o.ID_EVENTO=r.eventId;
     return o;
@@ -1776,14 +1791,15 @@ function exportDash(type){
   let data=[], name="datos";
   if(type==="periodo"){
     const map={}; allTerapias.forEach(r=>{const per=periodOf(r[fechaK]);if(!per)return;if(!map[per])map[per]={c:0,s:0};map[per].c++;map[per].s+=Number(r[montoK])||0;});
-    data=Object.keys(map).sort().reverse().map(p=>({Periodo:periodLabel(p),Sesiones:map[p].c,"Monto total":map[p].s,"Promedio por sesión":map[p].c?Math.round(map[p].s/map[p].c):0}));
+    const map={}; allTerapias.forEach(r=>{const per=periodOf(r[fechaK]);if(!per)return;if(!map[per])map[per]={c:0,s:0,l:0,re:0};map[per].c++;map[per].s+=Number(r[montoK])||0;map[per].l+=(liquidoK?Number(r[liquidoK]):0)||0;map[per].re+=(retenidoK?Number(r[retenidoK]):0)||0;});
+    data=Object.keys(map).sort().reverse().map(p=>({Periodo:periodLabel(p),Sesiones:map[p].c,"Promedio por sesión":map[p].c?Math.round(map[p].s/map[p].c):0,"Monto total":map[p].s,"Líquido":map[p].l,"Retenido":map[p].re}));
     name="resumen_por_periodo";
   } else if(type==="impagas"){
-    data=allTerapias.filter(r=>pagadoK&&isUnpaidVal(r[pagadoK])).sort((a,b)=>String(b[fechaK]||"").localeCompare(String(a[fechaK]||""))).map(r=>({Paciente:nameForRut(rOf(r)),"Fecha atención":fmtDateTime(r[fechaK])||r[fechaK],"Tipo de Sesión":tipoSesion(r,sesK)||"",Monto:(r[montoK]==null||r[montoK]==="")?null:Number(r[montoK])}));
+    data=allTerapias.filter(r=>pagadoK&&isUnpaidVal(r[pagadoK])).sort((a,b)=>dateSortVal(b[fechaK]).localeCompare(dateSortVal(a[fechaK]))).map(r=>({Paciente:nameForRut(rOf(r)),"Fecha atención":fmtDateTime(r[fechaK])||r[fechaK],"Tipo de Sesión":tipoSesion(r,sesK)||"",Monto:(r[montoK]==null||r[montoK]==="")?null:Number(r[montoK])}));
     name="sesiones_no_pagadas";
   } else {
     const c=terMasterCols();
-    data=allTerapias.slice().sort((a,b)=>String(b[c.fechaK]||"").localeCompare(String(a[c.fechaK]||""))).map(r=>({
+    data=allTerapias.slice().sort((a,b)=>dateSortVal(b[c.fechaK]).localeCompare(dateSortVal(a[c.fechaK]))).map(r=>({
       "Fecha atención":fmtDateTime(r[c.fechaK])||r[c.fechaK],
       Paciente:nameForRut(rOf(r)),
       Monto:(r[c.montoK]==null||r[c.montoK]==="")?null:Number(r[c.montoK]),
