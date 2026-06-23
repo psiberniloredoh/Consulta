@@ -487,6 +487,7 @@ function labelFor(col){ return prettyKey(col).replace(/^id\s+/i,""); }
 function fmtDateMaybe(s){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s)); return m?(m[3]+"-"+m[2]+"-"+m[1]):null; }
 function fmtDateTime(s){ const m=/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(String(s)); return m?(m[3]+"-"+m[2]+"-"+m[1]+" "+m[4]+":"+m[5]):null; }
 function periodOf(s){ const m=/^(\d{4})-(\d{2})/.exec(String(s)); return m?(m[1]+"-"+m[2]):null; }
+const PERIOD_MIN="2023-09";
 function periodLabel(p){ const a=p.split("-"); const meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]; return (meses[(+a[1])-1]||a[1])+" "+a[0]; }
 function cellDisplay(v){ const dt=fmtDateTime(v); if(dt!==null)return dt; const d=fmtDateMaybe(v); if(d!==null)return d; return fmt(v); }
 function isMontoCol(c){ return /precio|monto/i.test(c); }
@@ -1068,7 +1069,7 @@ function renderDashboard(){
 function dashPeriodo(){
   const {fechaK, montoK, liquidoK}=terKeys();
   const map={};
-  allTerapias.forEach(r=>{ const per=periodOf(r[fechaK]); if(!per)return; if(!map[per])map[per]={c:0,s:0,l:0}; map[per].c++; map[per].s+=Number(r[montoK])||0; map[per].l+=(liquidoK?Number(r[liquidoK]):0)||0; });
+  allTerapias.forEach(r=>{ const per=periodOf(r[fechaK]); if(!per||per<PERIOD_MIN)return; if(!map[per])map[per]={c:0,s:0,l:0}; map[per].c++; map[per].s+=Number(r[montoK])||0; map[per].l+=(liquidoK?Number(r[liquidoK]):0)||0; });
   const periods=Object.keys(map).sort().reverse();
   let tc=0,ts=0,tl=0; periods.forEach(p=>{tc+=map[p].c; ts+=map[p].s; tl+=map[p].l;});
   const rows=periods.map(p=>{
@@ -1084,7 +1085,7 @@ function dashPeriodo(){
 function dashSII(){
   const {fechaK, montoK, retenidoK}=terKeys();
   const map={};
-  allTerapias.forEach(r=>{ if(!sesionBoleta(r)) return; const per=periodOf(r[fechaK]); if(!per)return; if(!map[per])map[per]={c:0,b:0,re:0}; map[per].c++; map[per].b+=Number(r[montoK])||0; map[per].re+=(retenidoK?Number(r[retenidoK]):0)||0; });
+  allTerapias.forEach(r=>{ if(!sesionBoleta(r)) return; const per=periodOf(r[fechaK]); if(!per||per<PERIOD_MIN)return; if(!map[per])map[per]={c:0,b:0,re:0}; map[per].c++; map[per].b+=Number(r[montoK])||0; map[per].re+=(retenidoK?Number(r[retenidoK]):0)||0; });
   const periods=Object.keys(map).sort().reverse();
   if(!periods.length) return '<div class="state-empty" style="margin-top:2vh"><div class="big">Sin boletas</div><p>No hay sesiones de pacientes con boleta todavía.</p></div>';
   let tc=0,tb=0,tr=0; periods.forEach(p=>{tc+=map[p].c; tb+=map[p].b; tr+=map[p].re;});
@@ -1104,7 +1105,7 @@ function renderPeriodoChart(){
   const cv=$("#dashChart"); if(!cv) return;
   const {fechaK,montoK}=terKeys();
   const map={};
-  allTerapias.forEach(r=>{ const per=periodOf(r[fechaK]); if(!per)return; if(!map[per])map[per]={c:0,s:0}; map[per].c++; map[per].s+=Number(r[montoK])||0; });
+  allTerapias.forEach(r=>{ const per=periodOf(r[fechaK]); if(!per||per<PERIOD_MIN)return; if(!map[per])map[per]={c:0,s:0}; map[per].c++; map[per].s+=Number(r[montoK])||0; });
   const periods=Object.keys(map).sort();
   const labels=periods.map(p=>periodLabel(p));
   const montos=periods.map(p=>map[p].s);
@@ -1137,7 +1138,7 @@ function renderSIIChart(){
   const cv=$("#siiChart"); if(!cv) return;
   const {fechaK,montoK}=terKeys();
   const map={};
-  allTerapias.forEach(r=>{ if(!sesionBoleta(r)) return; const per=periodOf(r[fechaK]); if(!per)return; if(!map[per])map[per]={c:0,s:0}; map[per].c++; map[per].s+=Number(r[montoK])||0; });
+  allTerapias.forEach(r=>{ if(!sesionBoleta(r)) return; const per=periodOf(r[fechaK]); if(!per||per<PERIOD_MIN)return; if(!map[per])map[per]={c:0,s:0}; map[per].c++; map[per].s+=Number(r[montoK])||0; });
   const periods=Object.keys(map).sort();
   const labels=periods.map(p=>periodLabel(p));
   const montos=periods.map(p=>map[p].s);
@@ -1243,6 +1244,19 @@ function dashImpagasPorMes(){
 function fmtFechaCorta(s){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s)); if(!m)return String(s||""); const meses=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]; return m[3]+" "+(meses[(+m[2])-1]||m[2])+" "+m[1]; }
 function phoneOf(p){ if(!p)return ""; const k=Object.keys(p).find(c=>/telefono|fono|celular|movil|phone/i.test(c)); return k?p[k]:""; }
 function emailOf(p){ if(!p)return ""; const k=Object.keys(p).find(c=>/correo|email|mail/i.test(c)); return k?p[k]:""; }
+let vacMeses=6, vacExcluded=new Set();
+let vacSubject="Aviso de vacaciones";
+let vacMsg="Hola, ¿cómo estás?\nTe escribo para contarte que estaré de vacaciones entre el ___ y el ___, así que durante esos días no tendremos sesiones. Retomamos con normalidad a partir del ___.\nCualquier cosa, me escribes y te respondo a mi regreso.\n¡Saludos!\nBerni";
+function waNumber(p){ let n=String(phoneOf(p)||"").replace(/\D/g,""); if(!n)return ""; if(n.length===9 && n[0]==="9") n="56"+n; return n; }
+function activePatients(months){
+  const cutoff=new Date(); cutoff.setMonth(cutoff.getMonth()-months);
+  const {fechaK}=terKeys();
+  const lastByRut={};
+  allTerapias.forEach(r=>{ const k=normRut(rOf(r)); const d=dateSortVal(r[fechaK]); if(!lastByRut[k]||d>lastByRut[k]) lastByRut[k]=d; });
+  return patients.filter(p=>{ const last=lastByRut[normRut(rutOf(p))]; if(!last)return false; const dt=new Date(String(last).replace(" ","T")); return !isNaN(dt.getTime()) && dt>=cutoff; });
+}
+function vacSelectedEmails(){ return activePatients(vacMeses).filter(p=>!vacExcluded.has(normRut(rutOf(p)))).map(p=>String(emailOf(p)||"").trim()).filter(Boolean); }
+function updateVacSummary(){ const active=activePatients(vacMeses); const sel=active.filter(p=>!vacExcluded.has(normRut(rutOf(p)))); const we=sel.filter(p=>String(emailOf(p)||"").trim()).length; const ww=sel.filter(p=>waNumber(p)).length; const e=$("#vacSummary"); if(e) e.textContent=sel.length+" seleccionados · "+we+" con correo · "+ww+" con WhatsApp"; }
 function openMailto(email, subject, body){ window.location.href="mailto:"+(email||"")+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body); }
 function bold(t,b){ return b?("*"+t+"*"):t; }
 function msgPendientes(rutKey, b){
@@ -1873,11 +1887,11 @@ function exportDash(type){
   const {fechaK,sesK,montoK,pagadoK,liquidoK,retenidoK}=terKeys();
   let data=[], name="datos";
   if(type==="periodo"){
-    const map={}; allTerapias.forEach(r=>{const per=periodOf(r[fechaK]);if(!per)return;if(!map[per])map[per]={c:0,s:0,l:0};map[per].c++;map[per].s+=Number(r[montoK])||0;map[per].l+=(liquidoK?Number(r[liquidoK]):0)||0;});
+    const map={}; allTerapias.forEach(r=>{const per=periodOf(r[fechaK]);if(!per||per<PERIOD_MIN)return;if(!map[per])map[per]={c:0,s:0,l:0};map[per].c++;map[per].s+=Number(r[montoK])||0;map[per].l+=(liquidoK?Number(r[liquidoK]):0)||0;});
     data=Object.keys(map).sort().reverse().map(p=>({Periodo:periodLabel(p),Sesiones:map[p].c,"Promedio por sesión":map[p].c?Math.round(map[p].s/map[p].c):0,"Monto total":map[p].s,"Líquido":map[p].l}));
     name="por_periodo";
   } else if(type==="sii"){
-    const map={}; allTerapias.forEach(r=>{ if(!sesionBoleta(r)) return; const per=periodOf(r[fechaK]);if(!per)return;if(!map[per])map[per]={c:0,b:0,re:0};map[per].c++;map[per].b+=Number(r[montoK])||0;map[per].re+=(retenidoK?Number(r[retenidoK]):0)||0;});
+    const map={}; allTerapias.forEach(r=>{ if(!sesionBoleta(r)) return; const per=periodOf(r[fechaK]);if(!per||per<PERIOD_MIN)return;if(!map[per])map[per]={c:0,b:0,re:0};map[per].c++;map[per].b+=Number(r[montoK])||0;map[per].re+=(retenidoK?Number(r[retenidoK]):0)||0;});
     data=Object.keys(map).sort().reverse().map(p=>({Periodo:periodLabel(p),Sesiones:map[p].c,"Promedio por sesión":map[p].c?Math.round(map[p].b/map[p].c):0,"Honorarios Brutos SII":map[p].b,"Retenido":map[p].re}));
     name="sii";
   } else if(type==="impagas"){
