@@ -231,13 +231,15 @@
   .ter-table.master th,.ter-table.master td{white-space:normal;overflow-wrap:anywhere;padding:11px 12px}
   .ter-table.master th{white-space:nowrap}
   .ter-table.master td{vertical-align:middle}
-  .ter-table.master th:nth-child(1),.ter-table.master td:nth-child(1){width:132px;white-space:nowrap}
-  .ter-table.master th:nth-child(3),.ter-table.master td:nth-child(3){width:94px}
+  .ter-table.master th:nth-child(1),.ter-table.master td:nth-child(1){width:130px;white-space:nowrap}
+  .ter-table.master th:nth-child(3),.ter-table.master td:nth-child(3){width:60px}
   .ter-table.master th:nth-child(4),.ter-table.master td:nth-child(4){width:92px}
-  .ter-table.master th:nth-child(5),.ter-table.master td:nth-child(5){width:96px}
-  .ter-table.master th:nth-child(6),.ter-table.master td:nth-child(6){width:62px}
-  .ter-table.master th:nth-child(7),.ter-table.master td:nth-child(7){width:108px}
-  .ter-table.master th:nth-child(8),.ter-table.master td:nth-child(8){width:124px}
+  .ter-table.master th:nth-child(5),.ter-table.master td:nth-child(5){width:90px}
+  .ter-table.master th:nth-child(6),.ter-table.master td:nth-child(6){width:94px}
+  .ter-table.master th:nth-child(7),.ter-table.master td:nth-child(7){width:60px}
+  .ter-table.master th:nth-child(8),.ter-table.master td:nth-child(8){width:104px}
+  .ter-table.master th:nth-child(9),.ter-table.master td:nth-child(9){width:116px}
+  .ter-table.master th:nth-child(10),.ter-table.master td:nth-child(10){width:68px}
   .ter-table.master th:nth-child(9),.ter-table.master td:nth-child(9){width:70px}
   .ter-table.master.tpat th:nth-child(1),.ter-table.master.tpat td:nth-child(1){width:140px;white-space:nowrap}
   .ter-table.master.tpat th:nth-child(2),.ter-table.master.tpat td:nth-child(2){width:110px}
@@ -990,6 +992,8 @@ function terKeys(){
     sesK: keys.find(c=>/id[_ ]?sesion/i.test(c)),
     pagadoK: keys.find(c=>/pagad/i.test(c)),
     montoK: keys.find(c=>/precio|monto/i.test(c)),
+    liquidoK: keys.find(c=>/liquido|líquido/i.test(c)),
+    retenidoK: keys.find(c=>/reten/i.test(c)),
   };
 }
 async function fetchAllTerapias(){
@@ -1047,18 +1051,18 @@ function renderDashboard(){
 function dashPeriodo(){
   const {fechaK, montoK, liquidoK, retenidoK}=terKeys();
   const map={};
-  allTerapias.forEach(r=>{ const per=periodOf(r[fechaK]); if(!per)return; if(!map[per])map[per]={c:0,s:0,l:0,re:0}; map[per].c++; map[per].s+=Number(r[montoK])||0; map[per].l+=(liquidoK?Number(r[liquidoK]):0)||0; map[per].re+=(retenidoK?Number(r[retenidoK]):0)||0; });
+  allTerapias.forEach(r=>{ const per=periodOf(r[fechaK]); if(!per)return; if(!map[per])map[per]={c:0,s:0,l:0,re:0,b:0}; map[per].c++; const mv=Number(r[montoK])||0; map[per].s+=mv; map[per].l+=(liquidoK?Number(r[liquidoK]):0)||0; map[per].re+=(retenidoK?Number(r[retenidoK]):0)||0; if(boletaFor(rOf(r))) map[per].b+=mv; });
   const periods=Object.keys(map).sort().reverse();
-  let tc=0,ts=0,tl=0,tr=0; periods.forEach(p=>{tc+=map[p].c; ts+=map[p].s; tl+=map[p].l; tr+=map[p].re;});
+  let tc=0,ts=0,tl=0,tr=0,tb=0; periods.forEach(p=>{tc+=map[p].c; ts+=map[p].s; tl+=map[p].l; tr+=map[p].re; tb+=map[p].b;});
   const rows=periods.map(p=>{
     const avg = map[p].c ? Math.round(map[p].s/map[p].c) : 0;
-    return '<tr><td>'+esc(periodLabel(p))+'</td><td class="num">'+map[p].c+'</td><td class="num">'+esc(fmtMonto(avg)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].s)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].l)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].re)||"$0")+'</td></tr>';
+    return '<tr><td>'+esc(periodLabel(p))+'</td><td class="num">'+map[p].c+'</td><td class="num">'+esc(fmtMonto(avg)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].s)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].l)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].re)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].b)||"$0")+'</td></tr>';
   }).join("");
   const avgTot = tc ? Math.round(ts/tc) : 0;
-  const total='<tr class="ter-total"><td>Total</td><td class="num">'+tc+'</td><td class="num">'+esc(fmtMonto(avgTot)||"$0")+'</td><td class="num">'+esc(fmtMonto(ts)||"$0")+'</td><td class="num">'+esc(fmtMonto(tl)||"$0")+'</td><td class="num">'+esc(fmtMonto(tr)||"$0")+'</td></tr>';
+  const total='<tr class="ter-total"><td>Total</td><td class="num">'+tc+'</td><td class="num">'+esc(fmtMonto(avgTot)||"$0")+'</td><td class="num">'+esc(fmtMonto(ts)||"$0")+'</td><td class="num">'+esc(fmtMonto(tl)||"$0")+'</td><td class="num">'+esc(fmtMonto(tr)||"$0")+'</td><td class="num">'+esc(fmtMonto(tb)||"$0")+'</td></tr>';
   return '<div class="dash-chart"><canvas id="dashChart"></canvas></div>'
     +'<div class="dash-bar"><span class="ter-count">'+periods.length+' periodos · '+tc+' sesiones</span><button class="btn-primary inline" data-export="periodo">Descargar Excel</button></div>'
-    +'<div class="table-card"><div class="table-scroll"><table class="ter-table"><thead><tr><th>Periodo</th><th class="num">Sesiones</th><th class="num">Promedio por sesión</th><th class="num">Monto total</th><th class="num">Líquido</th><th class="num">Retenido</th></tr></thead><tbody>'+rows+total+'</tbody></table></div></div>';
+    +'<div class="table-card"><div class="table-scroll"><table class="ter-table"><thead><tr><th>Periodo</th><th class="num">Sesiones</th><th class="num">Promedio por sesión</th><th class="num">Monto total</th><th class="num">Líquido</th><th class="num">Retenido</th><th class="num">Honorarios Brutos SII</th></tr></thead><tbody>'+rows+total+'</tbody></table></div></div>';
 }
 let periodoChart=null;
 function renderPeriodoChart(){
@@ -1278,6 +1282,7 @@ function rowViewHtml(r,c,id){
   return '<tr>'
     +'<td>'+esc(fmtDateTime(r[c.fechaK])||cellDisplay(r[c.fechaK])||"—")+'</td>'
     +'<td>'+esc(nameForRut(rOf(r)))+'</td>'
+    +'<td>'+(boletaFor(rOf(r))?'Sí':'No')+'</td>'
     +'<td class="num">'+esc(fmtMonto(r[c.montoK])||"—")+'</td>'
     +money(c.liquidoK?r[c.liquidoK]:"")
     +money(c.retenidoK?r[c.retenidoK]:"")
@@ -1297,6 +1302,7 @@ function rowEditHtml(r,c,id){
   return '<tr class="row-editing">'
     +'<td><input class="edit-input ed" data-f="fecha" type="datetime-local" value="'+esc(fdt)+'"></td>'
     +'<td>'+esc(nameForRut(rOf(r)))+'</td>'
+    +'<td>'+(boletaFor(rOf(r))?'Sí':'No')+'</td>'
     +tm("monto", r[c.montoK])
     +tm("liquido", c.liquidoK?r[c.liquidoK]:"")
     +tm("retenido", c.retenidoK?r[c.retenidoK]:"")
@@ -1311,7 +1317,7 @@ function dashTodasTableHtml(){
   let rows=allTerapias.slice().sort((a,b)=>dateSortVal(b[c.fechaK]).localeCompare(dateSortVal(a[c.fechaK])));
   const q=(dashTodasQuery||"").trim().toLowerCase();
   if(q) rows=rows.filter(r=>nameForRut(rOf(r)).toLowerCase().includes(q));
-  const thead='<tr><th>Fecha atención</th><th>Paciente</th><th class="num">Monto</th><th class="num">Líquido</th><th class="num">Retenido</th><th>Pagado</th><th>Tipo de Sesión</th><th>Tema Principal</th><th></th></tr>';
+  const thead='<tr><th>Fecha atención</th><th>Paciente</th><th>Boleta</th><th class="num">Monto</th><th class="num">Líquido</th><th class="num">Retenido</th><th>Pagado</th><th>Tipo de Sesión</th><th>Tema Principal</th><th></th></tr>';
   const body=rows.map(r=>{
     const id=c.idK?r[c.idK]:null;
     return (id!=null && String(id)===String(dashEditId)) ? rowEditHtml(r,c,id) : rowViewHtml(r,c,id);
@@ -1787,12 +1793,11 @@ async function confirmImport(){
 }
 function exportDash(type){
   if(typeof XLSX==="undefined"){ toast("No se pudo cargar el exportador",true); return; }
-  const {fechaK,sesK,montoK,pagadoK}=terKeys();
+  const {fechaK,sesK,montoK,pagadoK,liquidoK,retenidoK}=terKeys();
   let data=[], name="datos";
   if(type==="periodo"){
-    const map={}; allTerapias.forEach(r=>{const per=periodOf(r[fechaK]);if(!per)return;if(!map[per])map[per]={c:0,s:0};map[per].c++;map[per].s+=Number(r[montoK])||0;});
-    const map={}; allTerapias.forEach(r=>{const per=periodOf(r[fechaK]);if(!per)return;if(!map[per])map[per]={c:0,s:0,l:0,re:0};map[per].c++;map[per].s+=Number(r[montoK])||0;map[per].l+=(liquidoK?Number(r[liquidoK]):0)||0;map[per].re+=(retenidoK?Number(r[retenidoK]):0)||0;});
-    data=Object.keys(map).sort().reverse().map(p=>({Periodo:periodLabel(p),Sesiones:map[p].c,"Promedio por sesión":map[p].c?Math.round(map[p].s/map[p].c):0,"Monto total":map[p].s,"Líquido":map[p].l,"Retenido":map[p].re}));
+    const map={}; allTerapias.forEach(r=>{const per=periodOf(r[fechaK]);if(!per)return;if(!map[per])map[per]={c:0,s:0,l:0,re:0,b:0};map[per].c++;const mv=Number(r[montoK])||0;map[per].s+=mv;map[per].l+=(liquidoK?Number(r[liquidoK]):0)||0;map[per].re+=(retenidoK?Number(r[retenidoK]):0)||0;if(boletaFor(rOf(r)))map[per].b+=mv;});
+    data=Object.keys(map).sort().reverse().map(p=>({Periodo:periodLabel(p),Sesiones:map[p].c,"Promedio por sesión":map[p].c?Math.round(map[p].s/map[p].c):0,"Monto total":map[p].s,"Líquido":map[p].l,"Retenido":map[p].re,"Honorarios Brutos SII":map[p].b}));
     name="resumen_por_periodo";
   } else if(type==="impagas"){
     data=allTerapias.filter(r=>pagadoK&&isUnpaidVal(r[pagadoK])).sort((a,b)=>dateSortVal(b[fechaK]).localeCompare(dateSortVal(a[fechaK]))).map(r=>({Paciente:nameForRut(rOf(r)),"Fecha atención":fmtDateTime(r[fechaK])||r[fechaK],"Tipo de Sesión":tipoSesion(r,sesK)||"",Monto:(r[montoK]==null||r[montoK]==="")?null:Number(r[montoK])}));
@@ -1802,6 +1807,7 @@ function exportDash(type){
     data=allTerapias.slice().sort((a,b)=>dateSortVal(b[c.fechaK]).localeCompare(dateSortVal(a[c.fechaK]))).map(r=>({
       "Fecha atención":fmtDateTime(r[c.fechaK])||r[c.fechaK],
       Paciente:nameForRut(rOf(r)),
+      Boleta: boletaFor(rOf(r))?"Sí":"No",
       Monto:(r[c.montoK]==null||r[c.montoK]==="")?null:Number(r[c.montoK]),
       "Líquido":(c.liquidoK&&r[c.liquidoK]!=null&&r[c.liquidoK]!=="")?Number(r[c.liquidoK]):null,
       Retenido:(c.retenidoK&&r[c.retenidoK]!=null&&r[c.retenidoK]!=="")?Number(r[c.retenidoK]):null,
