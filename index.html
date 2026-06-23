@@ -179,6 +179,11 @@
   .dgname{font-family:"Fraunces",serif;font-size:17px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .dgsum{font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap}
   .ter-table th.num,.ter-table td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ter-table.ptable{table-layout:fixed;width:100%}
+  .ter-table.ptable th,.ter-table.ptable td{padding:9px 8px;overflow-wrap:break-word}
+  .ter-table.ptable th{font-size:11px;line-height:1.25;white-space:normal;vertical-align:bottom}
+  .ter-table.ptable td{font-size:13px}
+  .ter-table.ptable th:nth-child(1),.ter-table.ptable td:nth-child(1){width:13%}
   .ter-table tbody tr.ter-total td{font-weight:600;background:var(--accent-wash);border-top:2px solid var(--line-strong)}
   .dash-subcount{font-size:12.5px;color:var(--ink-soft);margin-bottom:8px}
   .cal-wrap{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
@@ -1051,18 +1056,18 @@ function renderDashboard(){
 function dashPeriodo(){
   const {fechaK, montoK, liquidoK, retenidoK}=terKeys();
   const map={};
-  allTerapias.forEach(r=>{ const per=periodOf(r[fechaK]); if(!per)return; if(!map[per])map[per]={c:0,s:0,l:0,re:0,b:0}; map[per].c++; const mv=Number(r[montoK])||0; map[per].s+=mv; map[per].l+=(liquidoK?Number(r[liquidoK]):0)||0; map[per].re+=(retenidoK?Number(r[retenidoK]):0)||0; if(boletaFor(rOf(r))) map[per].b+=mv; });
+  allTerapias.forEach(r=>{ const per=periodOf(r[fechaK]); if(!per)return; if(!map[per])map[per]={c:0,s:0,l:0,re:0,b:0,bc:0}; map[per].c++; const mv=Number(r[montoK])||0; map[per].s+=mv; map[per].l+=(liquidoK?Number(r[liquidoK]):0)||0; map[per].re+=(retenidoK?Number(r[retenidoK]):0)||0; if(boletaFor(rOf(r))){ map[per].b+=mv; map[per].bc++; } });
   const periods=Object.keys(map).sort().reverse();
-  let tc=0,ts=0,tl=0,tr=0,tb=0; periods.forEach(p=>{tc+=map[p].c; ts+=map[p].s; tl+=map[p].l; tr+=map[p].re; tb+=map[p].b;});
+  let tc=0,ts=0,tl=0,tr=0,tb=0,tbc=0; periods.forEach(p=>{tc+=map[p].c; ts+=map[p].s; tl+=map[p].l; tr+=map[p].re; tb+=map[p].b; tbc+=map[p].bc;});
   const rows=periods.map(p=>{
     const avg = map[p].c ? Math.round(map[p].s/map[p].c) : 0;
-    return '<tr><td>'+esc(periodLabel(p))+'</td><td class="num">'+map[p].c+'</td><td class="num">'+esc(fmtMonto(avg)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].s)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].l)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].re)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].b)||"$0")+'</td></tr>';
+    return '<tr><td>'+esc(periodLabel(p))+'</td><td class="num">'+map[p].c+'</td><td class="num">'+esc(fmtMonto(avg)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].s)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].l)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].re)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].b)||"$0")+'</td><td class="num">'+map[p].bc+'</td></tr>';
   }).join("");
   const avgTot = tc ? Math.round(ts/tc) : 0;
-  const total='<tr class="ter-total"><td>Total</td><td class="num">'+tc+'</td><td class="num">'+esc(fmtMonto(avgTot)||"$0")+'</td><td class="num">'+esc(fmtMonto(ts)||"$0")+'</td><td class="num">'+esc(fmtMonto(tl)||"$0")+'</td><td class="num">'+esc(fmtMonto(tr)||"$0")+'</td><td class="num">'+esc(fmtMonto(tb)||"$0")+'</td></tr>';
+  const total='<tr class="ter-total"><td>Total</td><td class="num">'+tc+'</td><td class="num">'+esc(fmtMonto(avgTot)||"$0")+'</td><td class="num">'+esc(fmtMonto(ts)||"$0")+'</td><td class="num">'+esc(fmtMonto(tl)||"$0")+'</td><td class="num">'+esc(fmtMonto(tr)||"$0")+'</td><td class="num">'+esc(fmtMonto(tb)||"$0")+'</td><td class="num">'+tbc+'</td></tr>';
   return '<div class="dash-chart"><canvas id="dashChart"></canvas></div>'
     +'<div class="dash-bar"><span class="ter-count">'+periods.length+' periodos · '+tc+' sesiones</span><button class="btn-primary inline" data-export="periodo">Descargar Excel</button></div>'
-    +'<div class="table-card"><div class="table-scroll"><table class="ter-table"><thead><tr><th>Periodo</th><th class="num">Sesiones</th><th class="num">Promedio por sesión</th><th class="num">Monto total</th><th class="num">Líquido</th><th class="num">Retenido</th><th class="num">Honorarios Brutos SII</th></tr></thead><tbody>'+rows+total+'</tbody></table></div></div>';
+    +'<div class="table-card"><div class="table-scroll"><table class="ter-table ptable"><thead><tr><th>Periodo</th><th class="num">Sesiones</th><th class="num">Promedio por sesión</th><th class="num">Monto total</th><th class="num">Líquido</th><th class="num">Retenido</th><th class="num">Honorarios Brutos SII</th><th class="num">Sesiones SII</th></tr></thead><tbody>'+rows+total+'</tbody></table></div></div>';
 }
 let periodoChart=null;
 function renderPeriodoChart(){
@@ -1796,8 +1801,8 @@ function exportDash(type){
   const {fechaK,sesK,montoK,pagadoK,liquidoK,retenidoK}=terKeys();
   let data=[], name="datos";
   if(type==="periodo"){
-    const map={}; allTerapias.forEach(r=>{const per=periodOf(r[fechaK]);if(!per)return;if(!map[per])map[per]={c:0,s:0,l:0,re:0,b:0};map[per].c++;const mv=Number(r[montoK])||0;map[per].s+=mv;map[per].l+=(liquidoK?Number(r[liquidoK]):0)||0;map[per].re+=(retenidoK?Number(r[retenidoK]):0)||0;if(boletaFor(rOf(r)))map[per].b+=mv;});
-    data=Object.keys(map).sort().reverse().map(p=>({Periodo:periodLabel(p),Sesiones:map[p].c,"Promedio por sesión":map[p].c?Math.round(map[p].s/map[p].c):0,"Monto total":map[p].s,"Líquido":map[p].l,"Retenido":map[p].re,"Honorarios Brutos SII":map[p].b}));
+    const map={}; allTerapias.forEach(r=>{const per=periodOf(r[fechaK]);if(!per)return;if(!map[per])map[per]={c:0,s:0,l:0,re:0,b:0,bc:0};map[per].c++;const mv=Number(r[montoK])||0;map[per].s+=mv;map[per].l+=(liquidoK?Number(r[liquidoK]):0)||0;map[per].re+=(retenidoK?Number(r[retenidoK]):0)||0;if(boletaFor(rOf(r))){map[per].b+=mv;map[per].bc++;}});
+    data=Object.keys(map).sort().reverse().map(p=>({Periodo:periodLabel(p),Sesiones:map[p].c,"Promedio por sesión":map[p].c?Math.round(map[p].s/map[p].c):0,"Monto total":map[p].s,"Líquido":map[p].l,"Retenido":map[p].re,"Honorarios Brutos SII":map[p].b,"Sesiones SII":map[p].bc}));
     name="resumen_por_periodo";
   } else if(type==="impagas"){
     data=allTerapias.filter(r=>pagadoK&&isUnpaidVal(r[pagadoK])).sort((a,b)=>dateSortVal(b[fechaK]).localeCompare(dateSortVal(a[fechaK]))).map(r=>({Paciente:nameForRut(rOf(r)),"Fecha atención":fmtDateTime(r[fechaK])||r[fechaK],"Tipo de Sesión":tipoSesion(r,sesK)||"",Monto:(r[montoK]==null||r[montoK]==="")?null:Number(r[montoK])}));
