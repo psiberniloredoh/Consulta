@@ -13,10 +13,10 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
-    --paper:#F2F4F0; --card:#FBFCFA; --ink:#1B2A27; --ink-soft:#5C6A64; --ink-faint:#8A958F;
-    --accent:#3F6F5F; --accent-deep:#2C5044; --accent-wash:#E7EFEA; --clay:#BF8458;
-    --line:#E2E6E0; --line-strong:#CDD4CD; --danger:#A8443B; --danger-wash:#F6E7E5;
-    --ok:#2C5044; --radius:14px; --shadow:0 1px 2px rgba(27,42,39,.04), 0 12px 30px rgba(27,42,39,.07);
+    --paper:#F4F2F8; --card:#FCFBFE; --ink:#241B30; --ink-soft:#665C73; --ink-faint:#948BA3;
+    --accent:#6B4E9E; --accent-deep:#4A2F6B; --accent-wash:#ECE5F4; --clay:#BF8458;
+    --line:#E6E1EE; --line-strong:#D2C9DD; --danger:#A8443B; --danger-wash:#F6E7E5;
+    --ok:#4A2F6B; --radius:14px; --shadow:0 1px 2px rgba(40,27,55,.05), 0 12px 30px rgba(40,27,55,.08);
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
@@ -41,7 +41,7 @@
   .btn-primary{padding:12px 16px;border:none;border-radius:10px;background:var(--accent-deep);color:#fff;font-size:14.5px;font-weight:500;transition:background .15s, transform .05s}
   .btn-primary.full{width:100%;margin-top:8px}
   .btn-primary.inline{padding:9px 16px;font-size:13.5px;border-radius:9px}
-  .btn-primary:hover{background:#234035}
+  .btn-primary:hover{background:#3B2456}
   .btn-primary:active{transform:translateY(1px)}
   .btn-primary:disabled{opacity:.55;cursor:default}
   .login-foot{margin-top:20px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-faint);display:flex;align-items:center;gap:7px}
@@ -61,7 +61,7 @@
   .sidebar .name{font-family:"Fraunces",serif;font-weight:600;font-size:18px;color:#fff;line-height:1.1}
   .side-nav{display:flex;flex-direction:column;gap:16px;flex:1;justify-content:center}
   .side-foot{display:flex;flex-direction:column;gap:3px;margin-top:auto;padding-top:10px;border-top:1px solid rgba(255,255,255,.12)}
-  .side-item{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:transparent;border:none;color:#d6e4de;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s,color .15s;font-family:inherit}
+  .side-item{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:transparent;border:none;color:#D8CFE6;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s,color .15s;font-family:inherit}
   .side-item:hover{background:rgba(255,255,255,.10);color:#fff}
   .side-item.active{background:#fff;color:var(--accent-deep);font-weight:600}
   .side-item svg{width:18px;height:18px;flex-shrink:0}
@@ -307,7 +307,7 @@
   .ter-table.master input[type=datetime-local]{min-width:0;font-size:12px;padding:6px 4px}
   .ter-table tbody tr.row-editing td{background:var(--accent-wash)}
   .icon-act{padding:5px 4px}
-  .modal-scrim{position:fixed;inset:0;background:rgba(27,42,39,.34);display:grid;place-items:center;z-index:40;padding:20px}
+  .modal-scrim{position:fixed;inset:0;background:rgba(40,27,55,.34);display:grid;place-items:center;z-index:40;padding:20px}
   .modal-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;width:100%;max-width:380px}
   .modal-card h3{font-family:"Fraunces",serif;font-weight:500;font-size:19px;margin:0 0 4px;letter-spacing:-.01em}
   .mm-sub{font-size:13.5px;color:var(--ink-soft);margin:0 0 16px}
@@ -1199,7 +1199,7 @@ function renderPeriodoChart(){
   }};
   periodoChart=new Chart(cv.getContext("2d"),{
     type:"bar",
-    data:{ labels, datasets:[ { label:"Monto", data:montos, backgroundColor:"#3F6F5F", borderRadius:3 } ] },
+    data:{ labels, datasets:[ { label:"Monto", data:montos, backgroundColor:"#5B3E86", borderRadius:3 } ] },
     options:{
       responsive:true, maintainAspectRatio:false, interaction:{ mode:"index", intersect:false },
       plugins:{ legend:{ display:false },
