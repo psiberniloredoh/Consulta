@@ -509,7 +509,7 @@ let user = null, patients = [], lookups = {}, currentPatient = null, editing = f
 let terapias = [], terapiasPeriodo = "", terEditId = null;
 let contactos = [], contactEditId = null;
 let allTerapias = [], dashSection = "periodo", dashTodasQuery = "", patientsByNorm = {}, monthModalRut = "", monthModalChannel = "wa", dashImpagaPeriodo = "", dashImpagaVista = "paciente";
-let googleToken = "", tokenClient = null, importRows = [], calPendingAction = null, remList = [], preciosByRut = {};
+let googleToken = "", tokenClient = null, importRows = [], calPendingAction = null, remList = [], preciosByRut = {}, remMonthGroups = [], remMonthPeriod = "";
 const WA_SVG='<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 18.15h-.01c-1.52 0-3.01-.41-4.3-1.18l-.31-.18-3.19.84.85-3.11-.2-.32a8.2 8.2 0 0 1-1.26-4.39c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.82 2.42a8.16 8.16 0 0 1 2.41 5.82c0 4.54-3.7 8.23-8.25 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.16-.25.25-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.11-.22-.17-.47-.29z"/></svg>';
 const MAIL_SVG='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
 const PENCIL_SVG='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
@@ -1560,10 +1560,14 @@ function dashCalendario(){
     +(cid?'<button class="btn-ghost" id="gcalChangeId" style="margin-left:auto">Cambiar cuenta de Google</button>':'')
     +'</div></div>';
   const reminderCard='<div class="cal-import"><h3>Recordar sesiones a pacientes</h3>'
-    +'<p class="mm-sub" style="margin:0">Elige un día y avisa por WhatsApp o correo a quienes tienen sesión ese día.</p>'
+    +'<p class="mm-sub" style="margin:0">Avisa por WhatsApp o correo a quienes tienen sesión.</p>'
     +'<div class="ci-row">'
-    +'<div><label>Día</label><input type="date" id="remDate" value="'+fmtD(today)+'"></div>'
+    +'<div><label>Recordar un día</label><input type="date" id="remDate" value="'+fmtD(today)+'"></div>'
     +'<button class="btn-primary inline" id="remShow"'+(cid?'':' disabled')+'>Ver pacientes del día</button>'
+    +'</div>'
+    +'<div class="ci-row">'
+    +'<div><label>Recordatorio mensual</label><input type="month" id="remMonth" value="'+today.getFullYear()+'-'+pad(today.getMonth()+1)+'"></div>'
+    +'<button class="btn-primary inline" id="remMonthShow"'+(cid?'':' disabled')+'>Ver sesiones del mes</button>'
     +'</div></div>';
   const iframe = CALENDAR_EMBED_SRC ? '<div class="cal-wrap"><iframe src="'+esc(CALENDAR_EMBED_SRC)+'" style="border:0" width="100%" height="600" frameborder="0" scrolling="no"></iframe></div>' : '';
   return '<div class="cal-top">'+importCard+reminderCard+'</div>'+iframe;
@@ -1573,6 +1577,7 @@ function wireCalendario(){
   const chg=$("#gcalChangeId"); if(chg) chg.addEventListener("click",()=>{ try{ localStorage.removeItem("gcalClientId"); }catch(e){} googleToken=""; tokenClient=null; renderDashboard(); });
   const f=$("#gcalFetch"); if(f) f.addEventListener("click", traerCitas);
   const rs=$("#remShow"); if(rs) rs.addEventListener("click", verSesionesDia);
+  const rms=$("#remMonthShow"); if(rms) rms.addEventListener("click", verSesionesMes);
 }
 function normTxt(s){ return String(s==null?"":s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim(); }
 function matchPatientByTitle(title){
@@ -1727,6 +1732,61 @@ function sendReminderMail(i){
   const email=String(emailOf(row.patient)||"").trim();
   if(!email){ toast("Este paciente no tiene correo",true); return; }
   openMailto(email, "Recordatorio de tu sesión", reminderMsg(displayName(row.patient),row.startDT));
+}
+function verSesionesMes(){
+  const m=$("#remMonth")?$("#remMonth").value:"";
+  if(!m){ toast("Elige el mes",true); return; }
+  withGoogle(()=>fetchMonthReminders(m));
+}
+async function fetchMonthReminders(month){
+  const parts=String(month).split("-"); const y=+parts[0], mo=+parts[1];
+  if(!y||!mo){ toast("Mes inválido",true); return; }
+  const start=new Date(y, mo-1, 1, 0,0,0);
+  const end=new Date(y, mo, 0, 23,59,59);
+  let items;
+  try{ items=await gcalFetchItems(start.toISOString(), end.toISOString()); }
+  catch(e){ toast("No se pudo leer el calendario",true); return; }
+  buildMonthReminderModal(items, month);
+}
+function monthlyReminderMsg(period, dates){
+  const lines=dates.map(iso=>"• "+fmtRemWhen(iso)+" hrs.").join("\n");
+  return "Hola ¿cómo estás?,\nte recuerdo tus sesiones de "+periodLabel(period)+":\n"+lines+"\n¿Confirmas?\nSaludos,\nBerni";
+}
+function buildMonthReminderModal(items, month){
+  const evs=items.filter(ev=>ev.status!=="cancelled" && ev.start && ev.start.dateTime).map(ev=>({ title:ev.summary||"", startDT:ev.start.dateTime, patient:matchPatientByTitle(ev.summary||"") }));
+  const groups={};
+  evs.forEach(e=>{ if(!e.patient) return; const k=normRut(rutOf(e.patient)); if(!groups[k]) groups[k]={patient:e.patient, dates:[]}; groups[k].dates.push(e.startDT); });
+  remMonthGroups=Object.values(groups).map(g=>{ g.dates.sort((a,b)=>String(a).localeCompare(String(b))); return g; }).sort((a,b)=>displayName(a.patient).localeCompare(displayName(b.patient),"es",{sensitivity:"base"}));
+  remMonthPeriod=month;
+  const total=remMonthGroups.length;
+  $("#reminderSub").textContent = total ? (total+(total===1?" paciente con sesiones en ":" pacientes con sesiones en ")+periodLabel(month)) : ("Sin sesiones en "+periodLabel(month));
+  const body=remMonthGroups.map((g,i)=>{
+    const name=displayName(g.patient);
+    const phone=String(phoneOf(g.patient)||"").replace(/\D/g,"");
+    const email=String(emailOf(g.patient)||"").trim();
+    const wa=phone?'<button class="btn-icon wa" data-remm-wa="'+i+'" title="Recordar por WhatsApp">'+WA_SVG+'</button>':'';
+    const ml=email?'<button class="btn-icon" data-remm-mail="'+i+'" title="Recordar por correo">'+MAIL_SVG+'</button>':'';
+    const acts=(wa+ml)||'<span class="cell-faint">sin contacto</span>';
+    const cnt=g.dates.length;
+    return '<tr><td>'+esc(name)+'</td><td style="white-space:nowrap">'+cnt+(cnt===1?' sesión':' sesiones')+'</td><td style="text-align:right"><span style="display:inline-flex;gap:6px;justify-content:flex-end">'+acts+'</span></td></tr>';
+  }).join("");
+  $("#reminderBody").innerHTML = total ? '<table class="ter-table"><thead><tr><th>Paciente</th><th>Sesiones</th><th></th></tr></thead><tbody>'+body+'</tbody></table>' : '<p class="mm-sub" style="padding:14px">No hay sesiones ese mes.</p>';
+  const w=$("#reminderBody");
+  w.querySelectorAll("[data-remm-wa]").forEach(b=>b.addEventListener("click",()=>sendMonthReminderWa(+b.dataset.remmWa)));
+  w.querySelectorAll("[data-remm-mail]").forEach(b=>b.addEventListener("click",()=>sendMonthReminderMail(+b.dataset.remmMail)));
+  $("#reminderModal").classList.remove("hidden");
+}
+function sendMonthReminderWa(i){
+  const g=remMonthGroups[i]; if(!g) return;
+  const phone=String(phoneOf(g.patient)||"").replace(/\D/g,"");
+  if(!phone){ toast("Este paciente no tiene teléfono",true); return; }
+  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(monthlyReminderMsg(remMonthPeriod, g.dates)),"_blank");
+}
+function sendMonthReminderMail(i){
+  const g=remMonthGroups[i]; if(!g) return;
+  const email=String(emailOf(g.patient)||"").trim();
+  if(!email){ toast("Este paciente no tiene correo",true); return; }
+  openMailto(email, "Tus sesiones de "+periodLabel(remMonthPeriod), monthlyReminderMsg(remMonthPeriod, g.dates));
 }
 function catTitle(def){
   return ({ID_COMUNA:"Comunas",ID_SEXO:"Sexo",ID_ESTABLECIMIENTO:"Establecimientos escolares",ID_SESION:"Tipos de sesión"})[def.fk] || def.table;
