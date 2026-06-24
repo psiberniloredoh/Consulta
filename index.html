@@ -69,6 +69,9 @@
   .content-wrap{flex:1;min-width:0;display:flex;flex-direction:column}
   .content-wrap .topbar{justify-content:flex-end}
   .dash-title{font-family:"Fraunces",serif;font-weight:600;font-size:26px;color:var(--ink);margin:0 0 20px;letter-spacing:-.01em;text-align:center}
+  .pat-owe{background:var(--danger-wash);border:1px solid #E7C9C4;color:var(--danger);border-radius:12px;padding:13px 17px;margin-bottom:16px;font-size:15px}
+  .pat-ok{background:var(--accent-wash);border:1px solid var(--line);color:var(--accent-deep);border-radius:12px;padding:13px 17px;margin-bottom:16px;font-size:15px;font-weight:500}
+  .ter-table.pat-simple th,.ter-table.pat-simple td{padding:11px 14px}
   @media(max-width:860px){
     .app{flex-direction:column}
     .sidebar{width:auto;height:auto;position:static;flex-direction:row;align-items:center;gap:8px;padding:10px 12px;overflow-x:auto}
@@ -568,7 +571,12 @@ function principalCells(p){
   const placed=new Set([rutc,nom,fnac,sename].filter(Boolean));
   const middle=cols.filter(c=>!placed.has(c)).map(c=>({col:c}));
   const end=sename?[{col:sename}]:[];
-  return [...front,...middle,...end];
+  let list=[...front,...middle,...end];
+  if(!isPsico){
+    const ok=c=>/^rut$/i.test(c)||/nombre/i.test(c)||/nacim/i.test(c)||/direcc/i.test(c)||/comuna/i.test(c)||/telefono|fono|celular|movil/i.test(c)||/email|correo|mail/i.test(c)||/sexo|genero/i.test(c)||/establec/i.test(c);
+    list=list.filter(cell=>cell.edad || (cell.col && ok(cell.col)));
+  }
+  return list;
 }
 function displayName(p){
   const keys=Object.keys(p);
@@ -913,10 +921,57 @@ function currentTerapiaRows(){
   if(fechaK) rows.sort((a,b)=>dateSortVal(b[fechaK]).localeCompare(dateSortVal(a[fechaK])));
   return rows;
 }
+function renderTerapiasPaciente(c){
+  const panel=$("#panel-terapias");
+  let periodSelect="";
+  if(c.fechaK){
+    const periods=[...new Set(terapias.map(r=>periodOf(r[c.fechaK])).filter(Boolean))].sort().reverse();
+    const opts='<option value="">Todos los periodos</option>'+periods.map(p=>'<option value="'+p+'"'+(p===terapiasPeriodo?' selected':'')+'>'+esc(periodLabel(p))+'</option>').join("");
+    periodSelect='<label class="ter-flabel">Periodo</label><select id="terPeriodo" class="edit-input ter-select">'+opts+'</select>';
+  }
+  const unpaid=terapias.filter(r=>c.pagadoK && isUnpaidVal(r[c.pagadoK]));
+  const owed=unpaid.reduce((a,r)=>a+(Number(r[c.montoK])||0),0);
+  const summary = unpaid.length
+    ? '<div class="pat-owe">Tienes <strong>'+unpaid.length+' '+(unpaid.length===1?'sesión pendiente':'sesiones pendientes')+' de pago</strong> por un total de <strong>'+esc(fmtMonto(owed)||"$0")+'</strong>.</div>'
+    : '<div class="pat-ok">Estás al día con tus pagos ✓</div>';
+  const rows=currentTerapiaRows();
+  const thead='<tr><th>Periodo</th><th>Fecha</th><th>Tipo de sesión</th><th class="num">Monto</th><th>Pagado</th></tr>';
+  const body=rows.map(r=>{
+    const tipo=(c.sesK&&lookups["ID_SESION"])?(lookups["ID_SESION"].byId[r[c.sesK]]??""):"";
+    const unp=c.pagadoK&&isUnpaidVal(r[c.pagadoK]);
+    const pagado=c.pagadoK?(unp?"No":"Sí"):"";
+    const per=periodOf(r[c.fechaK]); const perLbl=per?periodLabel(per):"—";
+    return '<tr'+(unp?' class="row-unpaid"':'')+'><td>'+esc(perLbl)+'</td><td>'+esc(fmtDateTime(r[c.fechaK])||cellDisplay(r[c.fechaK])||"—")+'</td><td>'+esc(tipo||"—")+'</td><td class="num">'+esc(fmtMonto(r[c.montoK])||"—")+'</td><td>'+esc(pagado||"—")+'</td></tr>';
+  }).join("");
+  panel.innerHTML=summary
+    +'<div class="ter-bar">'+periodSelect+'<span class="ter-count">'+rows.length+' '+(rows.length===1?"sesión":"sesiones")+'</span><button class="btn-primary inline" id="terExportPat">Descargar Excel</button></div>'
+    +'<div class="table-card"><div class="table-scroll"><table class="ter-table pat-simple"><thead>'+thead+'</thead><tbody>'+body+'</tbody></table></div></div>';
+  const sel=$("#terPeriodo"); if(sel) sel.addEventListener("change",e=>{ terapiasPeriodo=e.target.value; renderTerapias(); });
+  const exp=$("#terExportPat"); if(exp) exp.addEventListener("click", exportTerapiasPaciente);
+}
+function exportTerapiasPaciente(){
+  if(typeof XLSX==="undefined"){ toast("No se pudo cargar el exportador",true); return; }
+  if(!terapias.length){ toast("No hay sesiones para exportar",true); return; }
+  const c=terColsFrom(terapias[0]||{});
+  const data=terapias.slice().sort((a,b)=>dateSortVal(b[c.fechaK]).localeCompare(dateSortVal(a[c.fechaK]))).map(r=>{
+    const per=periodOf(r[c.fechaK]);
+    return {
+      Periodo: per?periodLabel(per):"",
+      Fecha: fmtDateTime(r[c.fechaK])||r[c.fechaK],
+      "Tipo de sesión": (c.sesK&&lookups["ID_SESION"])?(lookups["ID_SESION"].byId[r[c.sesK]]||""):"",
+      Monto: (r[c.montoK]==null||r[c.montoK]==="")?null:Number(r[c.montoK]),
+      Pagado: c.pagadoK?(isUnpaidVal(r[c.pagadoK])?"No":"Sí"):""
+    };
+  });
+  const ws=XLSX.utils.json_to_sheet(data); const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Mis sesiones");
+  XLSX.writeFile(wb, "mis_sesiones.xlsx");
+}
 function renderTerapias(){
   const panel=$("#panel-terapias");
   if(!terapias.length){ panel.innerHTML='<div class="state-empty" style="margin-top:4vh"><div class="big">Sin terapias registradas</div><p>Este paciente no tiene sesiones en la tabla Terapias.</p></div>'; return; }
   const c=terColsFrom(terapias[0]||{});
+  if(!isPsico){ renderTerapiasPaciente(c); return; }
   let periodSelect="";
   if(c.fechaK){
     const periods=[...new Set(terapias.map(r=>periodOf(r[c.fechaK])).filter(Boolean))].sort().reverse();
