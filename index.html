@@ -250,7 +250,8 @@
   .cal-import h3{margin:0 0 4px;font-size:16px}
   .cal-import .ci-row{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-top:10px}
   .cal-import label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px}
-  .cal-import input[type=date]{padding:9px 10px;border:1px solid var(--line-strong);border-radius:9px;font-size:13.5px;font-family:inherit}
+  .cal-import input[type=date],.cal-import select.rem-select{padding:9px 10px;border:1px solid var(--line-strong);border-radius:9px;font-size:13.5px;font-family:inherit;background:var(--card);color:var(--ink)}
+  .cal-import select.rem-select{min-width:155px;cursor:pointer}
   .cal-setup{background:#FBF6EC;border:1px solid #E6D8BD;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13.5px;color:var(--ink-soft)}
   .cal-setup input{width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid var(--line-strong);border-radius:9px;font-family:inherit;font-size:13px;margin-top:6px}
   .cal-wrap iframe{display:block;width:100%}
@@ -535,6 +536,15 @@ function fmtDateTime(s){ const m=/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.e
 function periodOf(s){ const m=/^(\d{4})-(\d{2})/.exec(String(s)); return m?(m[1]+"-"+m[2]):null; }
 const PERIOD_MIN="2023-09";
 function periodLabel(p){ const a=p.split("-"); const meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]; return (meses[(+a[1])-1]||a[1])+" "+a[0]; }
+function monthOptionsHtml(selected){
+  const base=new Date(); let html="";
+  for(let i=-2;i<=12;i++){
+    const d=new Date(base.getFullYear(), base.getMonth()+i, 1);
+    const val=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+    html+='<option value="'+val+'"'+(val===selected?' selected':'')+'>'+esc(periodLabel(val))+'</option>';
+  }
+  return html;
+}
 function cellDisplay(v){ const dt=fmtDateTime(v); if(dt!==null)return dt; const d=fmtDateMaybe(v); if(d!==null)return d; return fmt(v); }
 function isMontoCol(c){ return /precio|monto/i.test(c); }
 function fmtMonto(x){ if(x===null||x===undefined||x==="")return null; const n=Number(x); if(isNaN(n))return fmt(x); return "$"+n.toLocaleString("es-CL"); }
@@ -1144,12 +1154,12 @@ function dashPeriodo(){
   let tc=0,ts=0,tl=0; periods.forEach(p=>{tc+=map[p].c; ts+=map[p].s; tl+=map[p].l;});
   const rows=periods.map(p=>{
     const avg = map[p].c ? Math.round(map[p].s/map[p].c) : 0;
-    return '<tr><td>'+esc(periodLabel(p))+'</td><td class="num">'+map[p].c+'</td><td class="num">'+esc(fmtMonto(avg)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].s)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].l)||"$0")+'</td></tr>';
+    return '<tr><td>'+esc(periodLabel(p))+'</td><td class="num">'+fmtMiles(map[p].c)+'</td><td class="num">'+esc(fmtMonto(avg)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].s)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].l)||"$0")+'</td></tr>';
   }).join("");
   const avgTot = tc ? Math.round(ts/tc) : 0;
-  const total='<tr class="ter-total"><td>Total</td><td class="num">'+tc+'</td><td class="num">'+esc(fmtMonto(avgTot)||"$0")+'</td><td class="num">'+esc(fmtMonto(ts)||"$0")+'</td><td class="num">'+esc(fmtMonto(tl)||"$0")+'</td></tr>';
+  const total='<tr class="ter-total"><td>Total</td><td class="num">'+fmtMiles(tc)+'</td><td class="num">'+esc(fmtMonto(avgTot)||"$0")+'</td><td class="num">'+esc(fmtMonto(ts)||"$0")+'</td><td class="num">'+esc(fmtMonto(tl)||"$0")+'</td></tr>';
   return '<div class="dash-chart"><canvas id="dashChart"></canvas></div>'
-    +'<div class="dash-bar"><span class="ter-count">'+periods.length+' periodos · '+tc+' sesiones</span><button class="btn-primary inline" data-export="periodo">Descargar Excel</button></div>'
+    +'<div class="dash-bar"><button class="btn-primary inline" style="margin-left:auto" data-export="periodo">Descargar Excel</button></div>'
     +'<div class="table-card"><div class="table-scroll"><table class="ter-table ptable"><thead><tr><th>Periodo</th><th class="num">Sesiones</th><th class="num">Promedio por sesión</th><th class="num">Monto total</th><th class="num">Líquido</th></tr></thead><tbody>'+rows+total+'</tbody></table></div></div>';
 }
 function dashSII(){
@@ -1161,12 +1171,12 @@ function dashSII(){
   let tc=0,tb=0,tr=0; periods.forEach(p=>{tc+=map[p].c; tb+=map[p].b; tr+=map[p].re;});
   const rows=periods.map(p=>{
     const avg = map[p].c ? Math.round(map[p].b/map[p].c) : 0;
-    return '<tr><td>'+esc(periodLabel(p))+'</td><td class="num">'+map[p].c+'</td><td class="num">'+esc(fmtMonto(avg)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].b)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].re)||"$0")+'</td></tr>';
+    return '<tr><td>'+esc(periodLabel(p))+'</td><td class="num">'+fmtMiles(map[p].c)+'</td><td class="num">'+esc(fmtMonto(avg)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].b)||"$0")+'</td><td class="num">'+esc(fmtMonto(map[p].re)||"$0")+'</td></tr>';
   }).join("");
   const avgTot = tc ? Math.round(tb/tc) : 0;
-  const total='<tr class="ter-total"><td>Total</td><td class="num">'+tc+'</td><td class="num">'+esc(fmtMonto(avgTot)||"$0")+'</td><td class="num">'+esc(fmtMonto(tb)||"$0")+'</td><td class="num">'+esc(fmtMonto(tr)||"$0")+'</td></tr>';
+  const total='<tr class="ter-total"><td>Total</td><td class="num">'+fmtMiles(tc)+'</td><td class="num">'+esc(fmtMonto(avgTot)||"$0")+'</td><td class="num">'+esc(fmtMonto(tb)||"$0")+'</td><td class="num">'+esc(fmtMonto(tr)||"$0")+'</td></tr>';
   return '<div class="dash-chart"><canvas id="siiChart"></canvas></div>'
-    +'<div class="dash-bar"><span class="ter-count">'+periods.length+' periodos · '+tc+' sesiones con boleta</span><button class="btn-primary inline" data-export="sii">Descargar Excel</button></div>'
+    +'<div class="dash-bar"><button class="btn-primary inline" style="margin-left:auto" data-export="sii">Descargar Excel</button></div>'
     +'<div class="table-card"><div class="table-scroll"><table class="ter-table ptable"><thead><tr><th>Periodo</th><th class="num">Sesiones</th><th class="num">Promedio por sesión</th><th class="num">Honorarios Brutos SII</th><th class="num">Retenido</th></tr></thead><tbody>'+rows+total+'</tbody></table></div></div>';
 }
 let periodoChart=null;
@@ -1566,7 +1576,7 @@ function dashCalendario(){
     +'<button class="btn-primary inline" id="remShow"'+(cid?'':' disabled')+'>Ver pacientes del día</button>'
     +'</div>'
     +'<div class="ci-row">'
-    +'<div><label>Recordatorio mensual</label><input type="month" id="remMonth" value="'+today.getFullYear()+'-'+pad(today.getMonth()+1)+'"></div>'
+    +'<div><label>Recordatorio mensual</label><select id="remMonth" class="rem-select">'+monthOptionsHtml(today.getFullYear()+'-'+pad(today.getMonth()+1))+'</select></div>'
     +'<button class="btn-primary inline" id="remMonthShow"'+(cid?'':' disabled')+'>Ver sesiones del mes</button>'
     +'</div></div>';
   const iframe = CALENDAR_EMBED_SRC ? '<div class="cal-wrap"><iframe src="'+esc(CALENDAR_EMBED_SRC)+'" style="border:0" width="100%" height="600" frameborder="0" scrolling="no"></iframe></div>' : '';
@@ -1693,7 +1703,7 @@ async function fetchDayReminders(date){
 function fmtRemTime(iso){ const d=new Date(iso); const p=n=>String(n).padStart(2,"0"); return isNaN(d.getTime())?"":p(d.getHours())+":"+p(d.getMinutes()); }
 const DIAS_SEM=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
 const MESES_ES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-function fmtRemWhen(iso){ const d=new Date(iso); if(isNaN(d.getTime())) return ""; const p=n=>String(n).padStart(2,"0"); const mes=MESES_ES[d.getMonth()]; const mesCap=mes.charAt(0).toUpperCase()+mes.slice(1); return DIAS_SEM[d.getDay()]+" "+d.getDate()+" de "+mesCap+" a las "+p(d.getHours())+":"+p(d.getMinutes()); }
+function fmtRemWhen(iso){ const d=new Date(iso); if(isNaN(d.getTime())) return ""; const p=n=>String(n).padStart(2,"0"); const mes=MESES_ES[d.getMonth()]; const mesCap=mes.charAt(0).toUpperCase()+mes.slice(1); const dia=DIAS_SEM[d.getDay()]; const diaCap=dia.charAt(0).toUpperCase()+dia.slice(1); return diaCap+" "+d.getDate()+" de "+mesCap+" a las "+p(d.getHours())+":"+p(d.getMinutes()); }
 function reminderMsg(name, iso){ return "Hola ¿cómo estás?,\nte escribo para recordar tu sesión del "+fmtRemWhen(iso)+" hrs.\n¿Confirmas?\nSaludos,\nBerni"; }
 function buildRemindersModal(items, date){
   remList=items.filter(ev=>ev.status!=="cancelled" && ev.start && ev.start.dateTime).map(ev=>{
