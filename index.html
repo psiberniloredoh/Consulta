@@ -750,8 +750,8 @@ $("#cancelBtn").addEventListener("click",()=>{
 });
 $("#saveBtn").addEventListener("click", async ()=>{
   const p=currentPatient; const update={};
-  document.querySelectorAll(".edit-input").forEach(el=>{
-    const col=el.dataset.col; let val=el.value; const orig=p[col];
+  document.querySelectorAll("#fichaGrid .edit-input").forEach(el=>{
+    const col=el.dataset.col; if(!col) return; let val=el.value; const orig=p[col];
     if(el.dataset.fk){ if(val===""){val=null;} else { const o=lookups[col].options.find(x=>String(x.id)===val); val=o?o.id:val; } }
     else if(el.dataset.bool){ val=(val==="true"); }
     else { if(val===""){val=null;} else if(typeof orig==="number" && !isNaN(Number(val))){val=Number(val);} }
